@@ -3,30 +3,30 @@ package main
 import (
 	"fmt"
 	"log"
+
+	"minecraft-manager/internal/backup"
 	"minecraft-manager/internal/config"
 	"minecraft-manager/internal/downloader"
+	"minecraft-manager/internal/runner"
 )
 
 func main() {
-	fmt.Println("[*] Iniciando Minecraft Server Manager...")
-
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("[-] Error crítico cargando configuración: %v", err)
+		log.Fatalf("[-] Error configuración: %v", err)
 	}
 
-	fmt.Printf("[+] Configuración cargada. RAM: %d GB | Puerto: %d\n", cfg.RAMGB, cfg.Port)
-
 	dl := downloader.New("server")
-
 	if cfg.PlayitPath == "playit.exe" {
 		dl.DownloadPlayit()
 	}
 
-	fmt.Println("\n[*] Verificando archivos del servidor...")
-	if dl.PromptUser() {
-		fmt.Println("[*] ¡Servidor listo para arrancar!")
-	} else {
-		fmt.Println("[!] Operación cancelada o fallida.")
+	fmt.Println("[*] Ejecutando tareas de mantenimiento...")
+	bm := backup.New("server", cfg.BackupRetentionDays)
+	if err := bm.CreateBackup(); err != nil {
+		fmt.Printf("[-] Alerta de backup: %v (continuando igual...)\n", err)
 	}
+
+	svr := runner.New(cfg)
+	svr.Start()
 }
