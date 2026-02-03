@@ -14,8 +14,6 @@ type Config struct {
 	Port                int    `json:"port"`
 }
 
-const configFileName = "config.json"
-
 func DefaultConfig() *Config {
 	return &Config{
 		JavaPath:            "java",
@@ -28,15 +26,17 @@ func DefaultConfig() *Config {
 }
 
 func Load() (*Config, error) {
-	if _, err := os.Stat(configFileName); os.IsNotExist(err) {
+	configPath := getConfigPath()
+
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		defaultCfg := DefaultConfig()
-		if err := saveConfig(defaultCfg); err != nil {
+		if err := saveConfig(configPath, defaultCfg); err != nil {
 			return nil, err
 		}
 		return defaultCfg, nil
 	}
 
-	file, err := os.ReadFile(configFileName)
+	file, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, err
 	}
@@ -49,10 +49,32 @@ func Load() (*Config, error) {
 	return &cfg, nil
 }
 
-func saveConfig(cfg *Config) error {
+func saveConfig(path string, cfg *Config) error {
 	data, err := json.MarshalIndent(cfg, "", "    ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(configFileName, data, 0644)
+	return os.WriteFile(path, data, 0644)
+}
+
+func getConfigPath() string {
+	filename := "config.json"
+
+	if _, err := os.Stat(filename); err == nil {
+		return filename
+	}
+
+	if _, err := os.Stat("../" + filename); err == nil {
+		return "../" + filename
+	}
+
+	if _, err := os.Stat("go.mod"); err == nil {
+		return filename
+	}
+
+	if _, err := os.Stat("../go.mod"); err == nil {
+		return "../" + filename
+	}
+
+	return filename
 }
