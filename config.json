@@ -1,0 +1,8 @@
+{
+    "java_path": "C:\\Program Files\\Eclipse Adoptium\\jdk-25.0.1.8-hotspot\\bin\\java.exe",
+    "jar_name": "server.jar",
+    "ram_gb": 4,
+    "playit_path": "playit.exe",
+    "backup_retention_days": 7,
+    "port": 25565
+}
