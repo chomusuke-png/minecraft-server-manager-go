@@ -31,3 +31,9 @@ type FabricLoader struct {
 	Version string `json:"version"`
 	Stable  bool   `json:"stable"`
 }
+
+type FabricInstaller struct {
+	Version string `json:"version"`
+	Stable  bool   `json:"stable"`
+	Url     string `json:"url"`
+}

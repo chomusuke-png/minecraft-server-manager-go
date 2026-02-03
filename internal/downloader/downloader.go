@@ -96,20 +96,48 @@ func (d *Downloader) DownloadPaper(version string) error {
 func (d *Downloader) DownloadFabric(version string) error {
 	fmt.Printf("[*] Fetching Fabric installer for %s...\n", version)
 
+	// 1. Obtener Loader (Cargador de Mods)
 	var loaders []FabricLoader
 	if err := getJSON("https://meta.fabricmc.net/v2/versions/loader", &loaders); err != nil {
-		return err
+		return fmt.Errorf("error fetching loaders: %w", err)
 	}
 
-	stableLoader := "0.15.7" // Fallback
+	loaderVersion := ""
 	for _, l := range loaders {
 		if l.Stable {
-			stableLoader = l.Version
+			loaderVersion = l.Version
 			break
 		}
 	}
+	if loaderVersion == "" {
+		loaderVersion = "0.15.7" // Fallback por seguridad
+	}
 
-	downloadURL := fmt.Sprintf("https://meta.fabricmc.net/v2/versions/loader/%s/%s/server/jar", version, stableLoader)
+	// 2. [NUEVO] Obtener Installer (El programa que instala el servidor)
+	var installers []FabricInstaller
+	if err := getJSON("https://meta.fabricmc.net/v2/versions/installer", &installers); err != nil {
+		return fmt.Errorf("error fetching installers: %w", err)
+	}
+
+	installerVersion := ""
+	for _, i := range installers {
+		if i.Stable {
+			installerVersion = i.Version
+			break
+		}
+	}
+	if installerVersion == "" {
+		installerVersion = "1.0.0" // Fallback
+	}
+
+	fmt.Printf("    -> Loader: %s | Installer: %s\n", loaderVersion, installerVersion)
+
+	// 3. Construir la URL completa: /loader/<game>/<loader>/<installer>/server/jar
+	downloadURL := fmt.Sprintf(
+		"https://meta.fabricmc.net/v2/versions/loader/%s/%s/%s/server/jar",
+		version, loaderVersion, installerVersion,
+	)
+
 	return d.DownloadFile(downloadURL, "server.jar")
 }
 
@@ -204,7 +232,6 @@ func (d *Downloader) PromptUser() bool {
 
 // --- Helpers ---
 
-// getJSON es un helper genérico para decodificar respuestas JSON
 func getJSON(url string, target interface{}) error {
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Get(url)
@@ -220,7 +247,6 @@ func getJSON(url string, target interface{}) error {
 	return json.NewDecoder(resp.Body).Decode(target)
 }
 
-// ProgressReader implementa io.Reader para trackear bytes leídos
 type ProgressReader struct {
 	Reader io.Reader
 	Total  int64

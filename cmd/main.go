@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
-	config "minecraft-manager/internal/config"
+	"minecraft-manager/internal/config"
+	"minecraft-manager/internal/downloader"
 )
 
 func main() {
@@ -14,11 +15,18 @@ func main() {
 		log.Fatalf("[-] Error crítico cargando configuración: %v", err)
 	}
 
-	fmt.Printf("[+] Configuración cargada correctamente:\n")
-	fmt.Printf("    -> Java Path: %s\n", cfg.JavaPath)
-	fmt.Printf("    -> RAM: %d GB\n", cfg.RAMGB)
-	fmt.Printf("    -> Puerto: %d\n", cfg.Port)
-	fmt.Printf("    -> Backup Days: %d\n", cfg.BackupRetentionDays)
+	fmt.Printf("[+] Configuración cargada. RAM: %d GB | Puerto: %d\n", cfg.RAMGB, cfg.Port)
 
-	fmt.Println("[*] Sistema listo para los siguientes módulos.")
+	dl := downloader.New("server")
+
+	if cfg.PlayitPath == "playit.exe" {
+		dl.DownloadPlayit()
+	}
+
+	fmt.Println("\n[*] Verificando archivos del servidor...")
+	if dl.PromptUser() {
+		fmt.Println("[*] ¡Servidor listo para arrancar!")
+	} else {
+		fmt.Println("[!] Operación cancelada o fallida.")
+	}
 }
