@@ -88,15 +88,12 @@ func (d *Downloader) DownloadPaper(version string) error {
 	fileName := fmt.Sprintf("paper-%s-%d.jar", version, latestBuild)
 	downloadURL := fmt.Sprintf("%s/builds/%d/downloads/%s", apiBase, latestBuild, fileName)
 
-	// En Go es común descargar a un nombre temporal y renombrar,
-	// pero aquí guardaremos directo como server.jar para simplificar la lógica del runner
 	return d.DownloadFile(downloadURL, "server.jar")
 }
 
 func (d *Downloader) DownloadFabric(version string) error {
 	fmt.Printf("[*] Fetching Fabric installer for %s...\n", version)
 
-	// 1. Obtener Loader (Cargador de Mods)
 	var loaders []FabricLoader
 	if err := getJSON("https://meta.fabricmc.net/v2/versions/loader", &loaders); err != nil {
 		return fmt.Errorf("error fetching loaders: %w", err)
@@ -110,10 +107,9 @@ func (d *Downloader) DownloadFabric(version string) error {
 		}
 	}
 	if loaderVersion == "" {
-		loaderVersion = "0.15.7" // Fallback por seguridad
+		loaderVersion = "0.15.7"
 	}
 
-	// 2. [NUEVO] Obtener Installer (El programa que instala el servidor)
 	var installers []FabricInstaller
 	if err := getJSON("https://meta.fabricmc.net/v2/versions/installer", &installers); err != nil {
 		return fmt.Errorf("error fetching installers: %w", err)
@@ -127,12 +123,11 @@ func (d *Downloader) DownloadFabric(version string) error {
 		}
 	}
 	if installerVersion == "" {
-		installerVersion = "1.0.0" // Fallback
+		installerVersion = "1.0.0"
 	}
 
 	fmt.Printf("    -> Loader: %s | Installer: %s\n", loaderVersion, installerVersion)
 
-	// 3. Construir la URL completa: /loader/<game>/<loader>/<installer>/server/jar
 	downloadURL := fmt.Sprintf(
 		"https://meta.fabricmc.net/v2/versions/loader/%s/%s/%s/server/jar",
 		version, loaderVersion, installerVersion,
