@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"minecraft-manager/internal/backup"
@@ -38,6 +40,8 @@ func main() {
 
 	ensurePlayit(cfg, dl)
 
+	startPlayit(cfg)
+
 	if err := eula.EnsureEulaAccepted(serverDirName); err != nil {
 		fmt.Printf("[-] Error con el EULA: %v\n", err)
 		return
@@ -51,6 +55,28 @@ func main() {
 
 	svr := runner.New(cfg)
 	svr.Start()
+}
+
+func startPlayit(cfg *config.Config) {
+	if !fileExists(cfg.PlayitPath) {
+		return
+	}
+
+	fmt.Println("[*] Iniciando túnel de Playit.gg...")
+
+	var cmd *exec.Cmd
+
+	if runtime.GOOS == "windows" {
+		cmd = exec.Command("cmd", "/C", "start", cfg.PlayitPath)
+	} else {
+		cmd = exec.Command(cfg.PlayitPath)
+		cmd.Stdout = nil
+		cmd.Stderr = nil
+	}
+
+	if err := cmd.Start(); err != nil {
+		fmt.Printf("[-] Error al ejecutar Playit: %v\n", err)
+	}
 }
 
 func ensureServerJar(cfg *config.Config, dl *downloader.Downloader) bool {
@@ -70,7 +96,6 @@ func ensureServerJar(cfg *config.Config, dl *downloader.Downloader) bool {
 }
 
 func ensurePlayit(cfg *config.Config, dl *downloader.Downloader) {
-
 	if fileExists(cfg.PlayitPath) {
 		return
 	}
