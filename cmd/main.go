@@ -14,6 +14,7 @@ import (
 	"minecraft-manager/internal/config"
 	"minecraft-manager/internal/downloader"
 	"minecraft-manager/internal/eula"
+	"minecraft-manager/internal/mods"
 	"minecraft-manager/internal/runner"
 )
 
@@ -39,13 +40,14 @@ func main() {
 	}
 
 	ensurePlayit(cfg, dl)
-
 	startPlayit(cfg)
 
 	if err := eula.EnsureEulaAccepted(serverDirName); err != nil {
 		fmt.Printf("[-] Error con el EULA: %v\n", err)
 		return
 	}
+
+	mods.DisableClientMods(serverDirName)
 
 	fmt.Println("\n[*] Ejecutando tareas de mantenimiento...")
 	bm := backup.New(serverDirName, cfg.BackupRetentionDays)
