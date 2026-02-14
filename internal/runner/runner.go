@@ -36,9 +36,7 @@ func (r *Runner) Start() {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
 	for {
-		fmt.Println("\n========================================")
 		fmt.Printf("[*] INICIANDO SERVIDOR (%d GB RAM)...\n", r.cfg.RAMGB)
-		fmt.Println("========================================")
 
 		intentionalStop := r.runServerInstance(serverDir, sigChan)
 

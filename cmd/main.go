@@ -15,6 +15,7 @@ import (
 	"minecraft-manager/internal/downloader"
 	"minecraft-manager/internal/eula"
 	"minecraft-manager/internal/mods"
+	"minecraft-manager/internal/properties"
 	"minecraft-manager/internal/runner"
 )
 
@@ -41,6 +42,11 @@ func main() {
 
 	ensurePlayit(cfg, dl)
 	startPlayit(cfg)
+
+	if err := properties.SetupInitialProperties(serverDirName); err != nil {
+		fmt.Printf("[-] Error configurando propiedades iniciales: %v\n", err)
+		return
+	}
 
 	if err := eula.EnsureEulaAccepted(serverDirName); err != nil {
 		fmt.Printf("[-] Error con el EULA: %v\n", err)
