@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"minecraft-manager/internal/backup"
@@ -15,6 +13,7 @@ import (
 	"minecraft-manager/internal/downloader"
 	"minecraft-manager/internal/eula"
 	"minecraft-manager/internal/mods"
+	"minecraft-manager/internal/playit"
 	"minecraft-manager/internal/properties"
 	"minecraft-manager/internal/runner"
 )
@@ -41,7 +40,12 @@ func main() {
 	}
 
 	ensurePlayit(cfg, dl)
-	startPlayit(cfg)
+
+	tunnel := playit.New()
+	if err := tunnel.Start(cfg); err != nil {
+		fmt.Printf("[-] Error iniciando Playit: %v\n", err)
+	}
+	defer tunnel.Stop()
 
 	if err := properties.SetupInitialProperties(serverDirName); err != nil {
 		fmt.Printf("[-] Error configurando propiedades iniciales: %v\n", err)
@@ -65,27 +69,7 @@ func main() {
 	svr.Start()
 }
 
-func startPlayit(cfg *config.Config) {
-	if !fileExists(cfg.PlayitPath) {
-		return
-	}
-
-	fmt.Println("[*] Iniciando túnel de Playit.gg...")
-
-	var cmd *exec.Cmd
-
-	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/C", "start", cfg.PlayitPath)
-	} else {
-		cmd = exec.Command(cfg.PlayitPath)
-		cmd.Stdout = nil
-		cmd.Stderr = nil
-	}
-
-	if err := cmd.Start(); err != nil {
-		fmt.Printf("[-] Error al ejecutar Playit: %v\n", err)
-	}
-}
+// --- Helpers ---
 
 func ensureServerJar(cfg *config.Config, dl *downloader.Downloader) bool {
 	jarPath := filepath.Join(serverDirName, cfg.JarName)
