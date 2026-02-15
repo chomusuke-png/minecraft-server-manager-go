@@ -9,7 +9,6 @@ import (
 )
 
 type TunnelManager struct {
-	process *os.Process
 }
 
 func New() *TunnelManager {
@@ -22,33 +21,28 @@ func (tm *TunnelManager) Start(cfg *config.Config) error {
 	}
 
 	absPath, err := filepath.Abs(cfg.PlayitPath)
-
-	fmt.Println("[*] Iniciando servicio Playit.gg (segundo plano)...")
-
-	cmd := exec.Command(absPath)
-
-	logFile, err := os.Create("playit.log")
 	if err != nil {
-		fmt.Printf("[-] No se pudo crear playit.log: %v\n", err)
-	} else {
-		cmd.Stdout = logFile
-		cmd.Stderr = logFile
+		return fmt.Errorf("error obteniendo ruta absoluta: %w", err)
 	}
+
+	fmt.Println("[*] Lanzando Playit...")
+
+	cmd := exec.Command("cmd", "/C", "start", "Playit Tunnel", absPath)
 
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("error al arrancar playit: %w", err)
+		return fmt.Errorf("error al lanzar ventana de playit: %w", err)
 	}
 
-	tm.process = cmd.Process
-	fmt.Printf("[+] Playit activo (PID: %d). Logs en 'playit.log'\n", tm.process.Pid)
 	return nil
 }
 
 func (tm *TunnelManager) Stop() {
-	if tm.process != nil {
-		fmt.Println("[*] Deteniendo Playit...")
-		if err := tm.process.Kill(); err != nil {
-		}
-		tm.process.Wait()
-	}
+	fmt.Println("[*] Cerrando ventanas de Playit...")
+
+	killCmd := exec.Command("taskkill", "/F", "/IM", "playit.exe")
+
+	killCmd.Stdout = nil
+	killCmd.Stderr = nil
+
+	_ = killCmd.Run()
 }
