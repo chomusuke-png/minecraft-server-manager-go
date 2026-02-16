@@ -29,7 +29,7 @@ func (d *Downloader) DownloadFile(url string, filename string) error {
 
 	fullPath := filepath.Join(d.serverDir, filename)
 	if filename == "playit.exe" {
-		fullPath = filepath.Join(d.serverDir, "..", filename)
+		fullPath = filename
 	}
 
 	fmt.Printf("[*] Downloading from: %s\n", url)
