@@ -6,36 +6,40 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"minecraft-manager/internal/backup"
 	"minecraft-manager/internal/config"
 	"minecraft-manager/internal/downloader"
 	"minecraft-manager/internal/eula"
+	"minecraft-manager/internal/instance"
 	"minecraft-manager/internal/mods"
 	"minecraft-manager/internal/playit"
 	"minecraft-manager/internal/properties"
 	"minecraft-manager/internal/runner"
 )
 
-const (
-	serverDirName = "server"
-)
-
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("[-] Error cargando configuración: %v", err)
+		log.Fatalf("[-] Error cargando configuración global: %v", err)
 	}
 
-	if err := os.MkdirAll(serverDirName, 0755); err != nil {
-		log.Fatalf("[-] No se pudo crear el directorio '%s': %v", serverDirName, err)
+	reader := bufio.NewReader(os.Stdin)
+
+	selectedInstanceDir := selectInstanceFlow(reader)
+	if selectedInstanceDir == "" {
+		fmt.Println("[*] Operación cancelada.")
+		return
 	}
 
-	dl := downloader.New(serverDirName)
+	fmt.Printf("\n[*] Trabajando sobre instancia: %s\n", selectedInstanceDir)
 
-	if !ensureServerJar(cfg, dl) {
-		fmt.Println("[-] No se puede iniciar sin un archivo de servidor (server.jar).")
+	dl := downloader.New(selectedInstanceDir)
+
+	if !ensureServerJar(selectedInstanceDir, cfg, dl) {
+		fmt.Println("[-] No se puede iniciar sin un archivo de servidor.")
 		return
 	}
 
@@ -47,38 +51,87 @@ func main() {
 	}
 	defer tunnel.Stop()
 
-	if err := properties.SetupInitialProperties(serverDirName); err != nil {
-		fmt.Printf("[-] Error configurando propiedades iniciales: %v\n", err)
+	if err := properties.SetupInitialProperties(selectedInstanceDir); err != nil {
+		fmt.Printf("[-] Error configurando propiedades: %v\n", err)
 		return
 	}
 
-	if err := eula.EnsureEulaAccepted(serverDirName); err != nil {
+	if err := eula.EnsureEulaAccepted(selectedInstanceDir); err != nil {
 		fmt.Printf("[-] Error con el EULA: %v\n", err)
 		return
 	}
 
-	mods.DisableClientMods(serverDirName)
+	mods.DisableClientMods(selectedInstanceDir)
 
 	fmt.Println("\n[*] Ejecutando tareas de mantenimiento...")
-	bm := backup.New(serverDirName, cfg.BackupRetentionDays)
+	bm := backup.New(selectedInstanceDir, cfg.BackupRetentionDays)
 	if err := bm.CreateBackup(); err != nil {
-		fmt.Printf("[-] Alerta de backup: %v (continuando igual...)\n", err)
+		fmt.Printf("[-] Alerta de backup: %v\n", err)
 	}
 
 	svr := runner.New(cfg)
-	svr.Start()
+	svr.Start(selectedInstanceDir)
+}
+
+// --- Menu de instancias ---
+
+func selectInstanceFlow(reader *bufio.Reader) string {
+	instances, err := instance.GetAvailableInstances()
+	if err != nil {
+		fmt.Printf("[-] Error leyendo instancias: %v\n", err)
+		return ""
+	}
+
+	fmt.Println("\n" + strings.Repeat("=", 30))
+	fmt.Println("   SELECTOR DE INSTANCIAS")
+	fmt.Println(strings.Repeat("=", 30))
+
+	if len(instances) == 0 {
+		fmt.Println("No hay instancias creadas.")
+	} else {
+		for i, inst := range instances {
+			fmt.Printf("%d) %s\n", i+1, inst)
+		}
+	}
+	fmt.Println("C) crear nueva instancia")
+	fmt.Println("Q) salir")
+
+	fmt.Print("\n[?] Opción: ")
+	choice, _ := reader.ReadString('\n')
+	choice = strings.ToUpper(strings.TrimSpace(choice))
+
+	if choice == "Q" {
+		return ""
+	}
+
+	if choice == "C" {
+		path, err := instance.CreateInstance(reader)
+		if err != nil {
+			fmt.Printf("[-] Error creando instancia: %v\n", err)
+			return ""
+		}
+		return path
+	}
+
+	idx, err := strconv.Atoi(choice)
+	if err != nil || idx < 1 || idx > len(instances) {
+		fmt.Println("[-] Opción inválida.")
+		return ""
+	}
+
+	return filepath.Join(instance.InstancesRootDir, instances[idx-1])
 }
 
 // --- Helpers ---
 
-func ensureServerJar(cfg *config.Config, dl *downloader.Downloader) bool {
-	jarPath := filepath.Join(serverDirName, cfg.JarName)
+func ensureServerJar(dir string, cfg *config.Config, dl *downloader.Downloader) bool {
+	jarPath := filepath.Join(dir, cfg.JarName)
 
 	if fileExists(jarPath) {
 		return true
 	}
 
-	fmt.Printf("[!] No se encontró '%s' en '%s'.\n", cfg.JarName, serverDirName)
+	fmt.Printf("[!] No se encontró '%s' en '%s'.\n", cfg.JarName, dir)
 
 	if !askYesNo("[?] ¿Descargar servidor automáticamente?") {
 		return false

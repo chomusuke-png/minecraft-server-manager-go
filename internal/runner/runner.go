@@ -23,9 +23,8 @@ func New(cfg *config.Config) *Runner {
 	}
 }
 
-func (r *Runner) Start() {
-	serverDir := "server"
-	jarPath := filepath.Join(serverDir, r.cfg.JarName)
+func (r *Runner) Start(instanceDir string) {
+	jarPath := filepath.Join(instanceDir, r.cfg.JarName)
 
 	if _, err := os.Stat(jarPath); os.IsNotExist(err) {
 		fmt.Printf("[-] Error: No se encuentra %s. Ejecuta el downloader primero.\n", jarPath)
@@ -36,9 +35,9 @@ func (r *Runner) Start() {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
 	for {
-		fmt.Printf("[*] INICIANDO SERVIDOR (%d GB RAM)...\n", r.cfg.RAMGB)
+		fmt.Printf("[*] INICIANDO SERVIDOR (%d GB RAM) en '%s'...\n", r.cfg.RAMGB, instanceDir)
 
-		intentionalStop := r.runServerInstance(serverDir, sigChan)
+		intentionalStop := r.runServerInstance(instanceDir, sigChan)
 
 		if intentionalStop {
 			fmt.Println("[*] Proceso de Manager finalizado limpiamente.")
@@ -98,9 +97,7 @@ func (r *Runner) runServerInstance(dir string, sigChan chan os.Signal) bool {
 
 	case <-sigChan:
 		fmt.Println("\n[*] Interrupción detectada (Ctrl+C). Guardando el mundo de forma segura...")
-
 		io.WriteString(stdinPipe, "stop\n")
-
 		<-done
 		return true
 	}
