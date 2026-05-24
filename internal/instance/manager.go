@@ -57,3 +57,12 @@ func CreateInstance(reader *bufio.Reader) (string, error) {
 	fmt.Printf("[+] Instancia '%s' creada en '%s'.\n", name, instancePath)
 	return instancePath, nil
 }
+
+// PrintInstanceInfo muestra la metadata de una instancia si existe.
+func PrintInstanceInfo(instanceDir string) {
+	meta, err := LoadMeta(instanceDir)
+	if err != nil {
+		return
+	}
+	fmt.Printf("    [%s %s]", meta.LoaderType, meta.MCVersion)
+}

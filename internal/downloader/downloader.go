@@ -16,6 +16,12 @@ type Downloader struct {
 	serverDir string
 }
 
+// DownloadResult contiene la metadata del servidor descargado.
+type DownloadResult struct {
+	LoaderType string
+	MCVersion  string
+}
+
 func New(serverDir string) *Downloader {
 	return &Downloader{
 		serverDir: serverDir,
@@ -34,7 +40,6 @@ func (d *Downloader) DownloadFile(url string, filename string) error {
 
 	fmt.Printf("[*] Downloading from: %s\n", url)
 
-	// Crear petición HTTP
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
@@ -45,21 +50,18 @@ func (d *Downloader) DownloadFile(url string, filename string) error {
 		return fmt.Errorf("server returned non-200 status: %s", resp.Status)
 	}
 
-	// Crear archivo local
 	out, err := os.Create(fullPath)
 	if err != nil {
 		return err
 	}
 	defer out.Close()
 
-	// Configurar progreso
 	size := resp.ContentLength
 	progressR := &ProgressReader{
 		Reader: resp.Body,
 		Total:  size,
 	}
 
-	// Copiar datos (streaming)
 	if _, err = io.Copy(out, progressR); err != nil {
 		return err
 	}
@@ -177,7 +179,9 @@ func (d *Downloader) DownloadPlayit() error {
 
 // --- User Interaction ---
 
-func (d *Downloader) PromptUser() bool {
+// PromptUser guía al usuario para elegir versión y tipo de servidor,
+// descarga el JAR y devuelve la metadata. Retorna nil si se cancela o hay error.
+func (d *Downloader) PromptUser() *DownloadResult {
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Println("\n" + strings.Repeat("=", 40))
@@ -190,7 +194,7 @@ func (d *Downloader) PromptUser() bool {
 
 	if version == "" {
 		fmt.Println("[!] Version cannot be empty.")
-		return false
+		return nil
 	}
 
 	fmt.Printf("\nSelect server type for %s:\n", version)
@@ -204,25 +208,30 @@ func (d *Downloader) PromptUser() bool {
 	choice = strings.TrimSpace(choice)
 
 	var err error
+	var loaderType string
+
 	switch choice {
 	case "1":
+		loaderType = "paper"
 		err = d.DownloadPaper(version)
 	case "2":
+		loaderType = "fabric"
 		err = d.DownloadFabric(version)
 	case "3":
+		loaderType = "vanilla"
 		err = d.DownloadVanilla(version)
 	default:
 		fmt.Println("[*] Cancelled.")
-		return false
+		return nil
 	}
 
 	if err != nil {
 		fmt.Printf("\n[-] Error installing server: %v\n", err)
-		return false
+		return nil
 	}
 
 	fmt.Printf("[+] Success! 'server.jar' installed for version %s.\n", version)
-	return true
+	return &DownloadResult{LoaderType: loaderType, MCVersion: version}
 }
 
 // --- Helpers ---

@@ -18,6 +18,7 @@ import (
 	"minecraft-manager/internal/playit"
 	"minecraft-manager/internal/properties"
 	"minecraft-manager/internal/runner"
+	"minecraft-manager/internal/updater"
 )
 
 func main() {
@@ -28,9 +29,16 @@ func main() {
 
 	reader := bufio.NewReader(os.Stdin)
 
-	selectedInstanceDir := selectInstanceFlow(reader)
+	selectedInstanceDir, action := selectInstanceFlow(reader)
 	if selectedInstanceDir == "" {
 		fmt.Println("[*] Operación cancelada.")
+		return
+	}
+
+	if action == "update" {
+		if err := updater.UpdateLoader(selectedInstanceDir, reader); err != nil {
+			fmt.Printf("[-] Error actualizando loader: %v\n", err)
+		}
 		return
 	}
 
@@ -75,11 +83,11 @@ func main() {
 
 // --- Menu de instancias ---
 
-func selectInstanceFlow(reader *bufio.Reader) string {
+func selectInstanceFlow(reader *bufio.Reader) (string, string) {
 	instances, err := instance.GetAvailableInstances()
 	if err != nil {
 		fmt.Printf("[-] Error leyendo instancias: %v\n", err)
-		return ""
+		return "", ""
 	}
 
 	fmt.Println("\n" + strings.Repeat("=", 30))
@@ -90,28 +98,63 @@ func selectInstanceFlow(reader *bufio.Reader) string {
 		fmt.Println("No hay instancias creadas.")
 	} else {
 		for i, inst := range instances {
-			fmt.Printf("%d) %s\n", i+1, inst)
+			instDir := filepath.Join(instance.InstancesRootDir, inst)
+			fmt.Printf("%d) %s", i+1, inst)
+			instance.PrintInstanceInfo(instDir)
+			fmt.Println()
 		}
 	}
+
 	fmt.Println("C) crear nueva instancia")
+	fmt.Println("U) actualizar loader de una instancia")
 	fmt.Println("Q) salir")
 
 	fmt.Print("\n[?] Opción: ")
 	choice, _ := reader.ReadString('\n')
 	choice = strings.ToUpper(strings.TrimSpace(choice))
 
-	if choice == "Q" {
-		return ""
-	}
+	switch choice {
+	case "Q":
+		return "", ""
 
-	if choice == "C" {
+	case "C":
 		path, err := instance.CreateInstance(reader)
 		if err != nil {
 			fmt.Printf("[-] Error creando instancia: %v\n", err)
-			return ""
+			return "", ""
 		}
-		return path
+		return path, ""
+
+	case "U":
+		if len(instances) == 0 {
+			fmt.Println("[-] No hay instancias disponibles para actualizar.")
+			return "", ""
+		}
+		instDir := selectExistingInstance(reader, instances)
+		return instDir, "update"
+
+	default:
+		idx, err := strconv.Atoi(choice)
+		if err != nil || idx < 1 || idx > len(instances) {
+			fmt.Println("[-] Opción inválida.")
+			return "", ""
+		}
+		return filepath.Join(instance.InstancesRootDir, instances[idx-1]), ""
 	}
+}
+
+func selectExistingInstance(reader *bufio.Reader, instances []string) string {
+	fmt.Println("\n[?] Seleccioná la instancia a actualizar:")
+	for i, inst := range instances {
+		instDir := filepath.Join(instance.InstancesRootDir, inst)
+		fmt.Printf("  %d) %s", i+1, inst)
+		instance.PrintInstanceInfo(instDir)
+		fmt.Println()
+	}
+
+	fmt.Print("[?] Opción: ")
+	choice, _ := reader.ReadString('\n')
+	choice = strings.TrimSpace(choice)
 
 	idx, err := strconv.Atoi(choice)
 	if err != nil || idx < 1 || idx > len(instances) {
@@ -137,7 +180,20 @@ func ensureServerJar(dir string, cfg *config.Config, dl *downloader.Downloader) 
 		return false
 	}
 
-	return dl.PromptUser()
+	result := dl.PromptUser()
+	if result == nil {
+		return false
+	}
+
+	meta := instance.InstanceMeta{
+		LoaderType: result.LoaderType,
+		MCVersion:  result.MCVersion,
+	}
+	if err := instance.SaveMeta(dir, meta); err != nil {
+		fmt.Printf("[!] Advertencia: no se pudo guardar instance.json: %v\n", err)
+	}
+
+	return true
 }
 
 func ensurePlayit(cfg *config.Config, dl *downloader.Downloader) {
