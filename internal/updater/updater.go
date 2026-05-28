@@ -17,6 +17,15 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 		)
 	}
 
+	if meta.LoaderType == "" || meta.MCVersion == "" {
+		return fmt.Errorf(
+			"metadata incompleta: loader_type='%s', mc_version='%s'\n"+
+				"La instancia puede haberse creado sin completar la descarga del JAR.\n"+
+				"Editá instance.json manualmente o eliminá la instancia y volvé a crearla.",
+			meta.LoaderType, meta.MCVersion,
+		)
+	}
+
 	ramDisplay := "global (config.json)"
 	if meta.RAMGB > 0 {
 		ramDisplay = fmt.Sprintf("%dGB", meta.RAMGB)

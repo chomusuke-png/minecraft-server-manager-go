@@ -123,9 +123,9 @@ func selectInstanceFlow(reader *bufio.Reader, cfg *config.Config) (string, strin
 			fmt.Printf("[-] Error creando instancia: %v\n", err)
 			return "", ""
 		}
-		meta := instance.InstanceMeta{RAMGB: ramGB}
-		if err := instance.SaveMeta(path, meta); err != nil {
-			fmt.Printf("[!] Advertencia: no se pudo guardar instance.json: %v\n", err)
+		pendingMeta := instance.InstanceMeta{RAMGB: ramGB}
+		if err := instance.SaveMeta(path, pendingMeta); err != nil {
+			fmt.Printf("[!] Advertencia: no se pudo guardar instance.json parcial: %v\n", err)
 		}
 		return path, ""
 
@@ -181,11 +181,13 @@ func ensureServerJar(dir string, cfg *config.Config, dl *downloader.Downloader) 
 	fmt.Printf("[!] No se encontró '%s' en '%s'.\n", cfg.JarName, dir)
 
 	if !askYesNo("[?] ¿Descargar servidor automáticamente?") {
+		cleanIncompleteInstance(dir)
 		return false
 	}
 
 	result := dl.PromptUser()
 	if result == nil {
+		cleanIncompleteInstance(dir)
 		return false
 	}
 
@@ -201,6 +203,25 @@ func ensureServerJar(dir string, cfg *config.Config, dl *downloader.Downloader) 
 	}
 
 	return true
+}
+
+func cleanIncompleteInstance(dir string) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+
+	for _, entry := range entries {
+		if entry.Name() != "instance.json" {
+			return
+		}
+	}
+
+	if err := os.RemoveAll(dir); err != nil {
+		fmt.Printf("[!] No se pudo limpiar instancia incompleta: %v\n", err)
+		return
+	}
+	fmt.Println("[*] Instancia incompleta eliminada.")
 }
 
 func ensurePlayit(cfg *config.Config, dl *downloader.Downloader) {
