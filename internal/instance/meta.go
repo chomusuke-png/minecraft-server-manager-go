@@ -10,6 +10,7 @@ import (
 type InstanceMeta struct {
 	LoaderType string `json:"loader_type"` // "paper", "fabric", "vanilla"
 	MCVersion  string `json:"mc_version"`
+	RAMGB      int    `json:"ram_gb,omitempty"` // 0 = usar el valor global de config.json
 }
 
 func SaveMeta(instanceDir string, meta InstanceMeta) error {

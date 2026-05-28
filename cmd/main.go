@@ -29,7 +29,7 @@ func main() {
 
 	reader := bufio.NewReader(os.Stdin)
 
-	selectedInstanceDir, action := selectInstanceFlow(reader)
+	selectedInstanceDir, action := selectInstanceFlow(reader, cfg)
 	if selectedInstanceDir == "" {
 		fmt.Println("[*] Operación cancelada.")
 		return
@@ -83,7 +83,7 @@ func main() {
 
 // --- Menu de instancias ---
 
-func selectInstanceFlow(reader *bufio.Reader) (string, string) {
+func selectInstanceFlow(reader *bufio.Reader, cfg *config.Config) (string, string) {
 	instances, err := instance.GetAvailableInstances()
 	if err != nil {
 		fmt.Printf("[-] Error leyendo instancias: %v\n", err)
@@ -118,10 +118,14 @@ func selectInstanceFlow(reader *bufio.Reader) (string, string) {
 		return "", ""
 
 	case "C":
-		path, err := instance.CreateInstance(reader)
+		path, ramGB, err := instance.CreateInstance(reader, cfg.RAMGB)
 		if err != nil {
 			fmt.Printf("[-] Error creando instancia: %v\n", err)
 			return "", ""
+		}
+		meta := instance.InstanceMeta{RAMGB: ramGB}
+		if err := instance.SaveMeta(path, meta); err != nil {
+			fmt.Printf("[!] Advertencia: no se pudo guardar instance.json: %v\n", err)
 		}
 		return path, ""
 
@@ -185,11 +189,14 @@ func ensureServerJar(dir string, cfg *config.Config, dl *downloader.Downloader) 
 		return false
 	}
 
-	meta := instance.InstanceMeta{
-		LoaderType: result.LoaderType,
-		MCVersion:  result.MCVersion,
+	meta, err := instance.LoadMeta(dir)
+	if err != nil {
+		meta = &instance.InstanceMeta{}
 	}
-	if err := instance.SaveMeta(dir, meta); err != nil {
+	meta.LoaderType = result.LoaderType
+	meta.MCVersion = result.MCVersion
+
+	if err := instance.SaveMeta(dir, *meta); err != nil {
 		fmt.Printf("[!] Advertencia: no se pudo guardar instance.json: %v\n", err)
 	}
 

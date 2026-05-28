@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"minecraft-manager/internal/config"
+	"minecraft-manager/internal/instance"
 )
 
 type Runner struct {
@@ -31,13 +32,15 @@ func (r *Runner) Start(instanceDir string) {
 		return
 	}
 
+	ramGB := r.resolveRAM(instanceDir)
+
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
 	for {
-		fmt.Printf("[*] INICIANDO SERVIDOR (%d GB RAM) en '%s'...\n", r.cfg.RAMGB, instanceDir)
+		fmt.Printf("[*] INICIANDO SERVIDOR (%dGB RAM) en '%s'...\n", ramGB, instanceDir)
 
-		intentionalStop := r.runServerInstance(instanceDir, sigChan)
+		intentionalStop := r.runServerInstance(instanceDir, ramGB, sigChan)
 
 		if intentionalStop {
 			fmt.Println("[*] Proceso de Manager finalizado limpiamente.")
@@ -55,9 +58,19 @@ func (r *Runner) Start(instanceDir string) {
 	}
 }
 
-func (r *Runner) runServerInstance(dir string, sigChan chan os.Signal) bool {
-	ramArg := fmt.Sprintf("-Xmx%dG", r.cfg.RAMGB)
-	initialRamArg := fmt.Sprintf("-Xms%dG", r.cfg.RAMGB)
+func (r *Runner) resolveRAM(instanceDir string) int {
+	meta, err := instance.LoadMeta(instanceDir)
+	if err == nil && meta.RAMGB > 0 {
+		fmt.Printf("[*] RAM configurada por instancia: %dGB\n", meta.RAMGB)
+		return meta.RAMGB
+	}
+	fmt.Printf("[*] RAM configurada globalmente: %dGB\n", r.cfg.RAMGB)
+	return r.cfg.RAMGB
+}
+
+func (r *Runner) runServerInstance(dir string, ramGB int, sigChan chan os.Signal) bool {
+	ramArg := fmt.Sprintf("-Xmx%dG", ramGB)
+	initialRamArg := fmt.Sprintf("-Xms%dG", ramGB)
 
 	cmd := exec.Command(r.cfg.JavaPath, ramArg, initialRamArg, "-jar", r.cfg.JarName, "nogui")
 	cmd.Dir = dir

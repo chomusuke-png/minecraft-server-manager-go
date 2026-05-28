@@ -12,12 +12,17 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 	meta, err := instance.LoadMeta(instanceDir)
 	if err != nil {
 		return fmt.Errorf(
-			"instancia sin metadata: %w\nTip: las instancias creadas antes de esta versión no tienen instance.json.\nPodés crearlo manualmente con el formato: {\"loader_type\": \"paper\", \"mc_version\": \"1.20.1\"}",
+			"instancia sin metadata: %w\nTip: las instancias creadas antes de esta versión no tienen instance.json.\nPodés crearlo manualmente con el formato: {\"loader_type\": \"paper\", \"mc_version\": \"1.20.1\", \"ram_gb\": 4}",
 			err,
 		)
 	}
 
-	fmt.Printf("\n[*] Instancia actual: %s %s\n", meta.LoaderType, meta.MCVersion)
+	ramDisplay := "global (config.json)"
+	if meta.RAMGB > 0 {
+		ramDisplay = fmt.Sprintf("%dGB", meta.RAMGB)
+	}
+	fmt.Printf("\n[*] Instancia actual: %s %s | RAM: %s\n", meta.LoaderType, meta.MCVersion, ramDisplay)
+
 	fmt.Printf("[?] Nueva versión de Minecraft (Enter para mantener '%s'): ", meta.MCVersion)
 	input, _ := reader.ReadString('\n')
 	input = strings.TrimSpace(input)
@@ -31,6 +36,8 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 	if err != nil {
 		return err
 	}
+
+	newRAMGB := instance.PromptRAMUpdate(reader, meta.RAMGB)
 
 	dl := downloader.New(instanceDir)
 
@@ -52,6 +59,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 
 	meta.MCVersion = newVersion
 	meta.LoaderType = newLoaderType
+	meta.RAMGB = newRAMGB
 	if err := instance.SaveMeta(instanceDir, *meta); err != nil {
 		fmt.Printf("[!] Advertencia: no se pudo actualizar instance.json: %v\n", err)
 	}
