@@ -26,12 +26,12 @@ func EnsureEulaAccepted(serverDir string) error {
 		return fmt.Errorf("EULA rechazado por el usuario")
 	}
 
-	f, err := os.Create(eulaPath)
+	eulaFile, err := os.Create(eulaPath)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer eulaFile.Close()
 
-	_, err = f.WriteString("eula=true\n")
+	_, err = eulaFile.WriteString("eula=true\n")
 	return err
 }

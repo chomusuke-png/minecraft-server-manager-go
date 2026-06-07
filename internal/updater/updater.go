@@ -46,18 +46,18 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 		return err
 	}
 
-	newRAMGB := instance.PromptRAMUpdate(reader, meta.RAMGB)
+	updatedRAMGB := instance.PromptRAMUpdate(reader, meta.RAMGB)
 
-	dl := downloader.New(instanceDir)
+	serverDownloader := downloader.New(instanceDir)
 
 	fmt.Printf("[*] Descargando %s %s...\n", newLoaderType, newVersion)
 	switch newLoaderType {
 	case "paper":
-		err = dl.DownloadPaper(newVersion)
+		err = serverDownloader.DownloadPaper(newVersion)
 	case "fabric":
-		err = dl.DownloadFabric(newVersion)
+		err = serverDownloader.DownloadFabric(newVersion)
 	case "vanilla":
-		err = dl.DownloadVanilla(newVersion)
+		err = serverDownloader.DownloadVanilla(newVersion)
 	default:
 		return fmt.Errorf("tipo de loader desconocido: %s", newLoaderType)
 	}
@@ -68,7 +68,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 
 	meta.MCVersion = newVersion
 	meta.LoaderType = newLoaderType
-	meta.RAMGB = newRAMGB
+	meta.RAMGB = updatedRAMGB
 	if err := instance.SaveMeta(instanceDir, *meta); err != nil {
 		fmt.Printf("[!] Advertencia: no se pudo actualizar instance.json: %v\n", err)
 	}

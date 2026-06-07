@@ -49,8 +49,8 @@ func (bm *BackupManager) CreateBackup() error {
 	}
 	defer file.Close()
 
-	w := zip.NewWriter(file)
-	defer w.Close()
+	zipWriter := zip.NewWriter(file)
+	defer zipWriter.Close()
 
 	err = filepath.Walk(worldPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -65,18 +65,18 @@ func (bm *BackupManager) CreateBackup() error {
 			return err
 		}
 
-		zipFile, err := w.Create(relPath)
+		zipEntry, err := zipWriter.Create(relPath)
 		if err != nil {
 			return err
 		}
 
-		fsFile, err := os.Open(path)
+		sourceFile, err := os.Open(path)
 		if err != nil {
 			return err
 		}
-		defer fsFile.Close()
+		defer sourceFile.Close()
 
-		_, err = io.Copy(zipFile, fsFile)
+		_, err = io.Copy(zipEntry, sourceFile)
 		return err
 	})
 
@@ -112,8 +112,8 @@ func (bm *BackupManager) cleanOldBackups() {
 		}
 
 		if info.ModTime().Before(cutoff) {
-			fullPath := filepath.Join(bm.backupDir, file.Name())
-			if err := os.Remove(fullPath); err == nil {
+			backupFilePath := filepath.Join(bm.backupDir, file.Name())
+			if err := os.Remove(backupFilePath); err == nil {
 				fmt.Printf("    -> Eliminado: %s\n", file.Name())
 				count++
 			} else {

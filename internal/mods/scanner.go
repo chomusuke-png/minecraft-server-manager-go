@@ -36,17 +36,17 @@ func DisableClientMods(serverDir string) {
 			continue
 		}
 
-		fullPath := filepath.Join(modsDir, file.Name())
-		env, err := getModEnvironment(fullPath)
+		modFilePath := filepath.Join(modsDir, file.Name())
+		modEnvironment, err := getModEnvironment(modFilePath)
 		if err != nil {
 			continue
 		}
 
-		if env == "client" {
+		if modEnvironment == "client" {
 			fmt.Printf("    -> DESHABILITANDO: %s (Es solo de cliente)\n", file.Name())
 
-			disabledPath := fullPath + ".disabled"
-			if err := os.Rename(fullPath, disabledPath); err != nil {
+			disabledModPath := modFilePath + ".disabled"
+			if err := os.Rename(modFilePath, disabledModPath); err != nil {
 				fmt.Printf("       [-] Error al deshabilitar: %v\n", err)
 			} else {
 				count++
@@ -62,21 +62,21 @@ func DisableClientMods(serverDir string) {
 }
 
 func getModEnvironment(jarPath string) (string, error) {
-	r, err := zip.OpenReader(jarPath)
+	zipReader, err := zip.OpenReader(jarPath)
 	if err != nil {
 		return "", err
 	}
-	defer r.Close()
+	defer zipReader.Close()
 
-	for _, f := range r.File {
-		if f.Name == "fabric.mod.json" {
-			rc, err := f.Open()
+	for _, zipEntry := range zipReader.File {
+		if zipEntry.Name == "fabric.mod.json" {
+			entryReader, err := zipEntry.Open()
 			if err != nil {
 				return "", err
 			}
-			defer rc.Close()
+			defer entryReader.Close()
 
-			content, err := io.ReadAll(rc)
+			content, err := io.ReadAll(entryReader)
 			if err != nil {
 				return "", err
 			}

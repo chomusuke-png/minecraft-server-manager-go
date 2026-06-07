@@ -20,14 +20,14 @@ func (tm *TunnelManager) Start(cfg *config.Config) error {
 		return nil
 	}
 
-	absPath, err := filepath.Abs(cfg.PlayitPath)
+	absolutePlayitPath, err := filepath.Abs(cfg.PlayitPath)
 	if err != nil {
 		return fmt.Errorf("error obteniendo ruta absoluta: %w", err)
 	}
 
 	fmt.Println("[*] Lanzando Playit...")
 
-	cmd := exec.Command("cmd", "/C", "start", "Playit Tunnel", absPath)
+	cmd := exec.Command("cmd", "/C", "start", "Playit Tunnel", absolutePlayitPath)
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("error al lanzar ventana de playit: %w", err)
@@ -39,10 +39,10 @@ func (tm *TunnelManager) Start(cfg *config.Config) error {
 func (tm *TunnelManager) Stop() {
 	fmt.Println("[*] Cerrando ventanas de Playit...")
 
-	killCmd := exec.Command("taskkill", "/F", "/IM", "playit.exe")
+	killCommand := exec.Command("taskkill", "/F", "/IM", "playit.exe")
 
-	killCmd.Stdout = nil
-	killCmd.Stderr = nil
+	killCommand.Stdout = nil
+	killCommand.Stderr = nil
 
-	_ = killCmd.Run()
+	_ = killCommand.Run()
 }

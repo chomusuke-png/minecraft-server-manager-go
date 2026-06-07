@@ -16,7 +16,6 @@ type Downloader struct {
 	serverDir string
 }
 
-// DownloadResult contiene la metadata del servidor descargado.
 type DownloadResult struct {
 	LoaderType string
 	MCVersion  string
@@ -33,36 +32,36 @@ func (d *Downloader) DownloadFile(url string, filename string) error {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	fullPath := filepath.Join(d.serverDir, filename)
+	destinationPath := filepath.Join(d.serverDir, filename)
 	if filename == "playit.exe" {
-		fullPath = filename
+		destinationPath = filename
 	}
 
 	fmt.Printf("[*] Downloading from: %s\n", url)
 
-	resp, err := http.Get(url)
+	response, err := http.Get(url)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer response.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("server returned non-200 status: %s", resp.Status)
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("server returned non-200 status: %s", response.Status)
 	}
 
-	out, err := os.Create(fullPath)
+	outputFile, err := os.Create(destinationPath)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer outputFile.Close()
 
-	size := resp.ContentLength
-	progressR := &ProgressReader{
-		Reader: resp.Body,
+	size := response.ContentLength
+	progressReader := &ProgressReader{
+		Reader: response.Body,
 		Total:  size,
 	}
 
-	if _, err = io.Copy(out, progressR); err != nil {
+	if _, err = io.Copy(outputFile, progressReader); err != nil {
 		return err
 	}
 
@@ -70,15 +69,13 @@ func (d *Downloader) DownloadFile(url string, filename string) error {
 	return nil
 }
 
-// --- Implementación de APIs ---
-
 func (d *Downloader) DownloadPaper(version string) error {
 	fmt.Printf("[*] Searching latest Paper build for %s...\n", version)
 
-	apiBase := fmt.Sprintf("https://api.papermc.io/v2/projects/paper/versions/%s", version)
+	paperAPIBaseURL := fmt.Sprintf("https://api.papermc.io/v2/projects/paper/versions/%s", version)
 
 	var data PaperBuildsResponse
-	if err := getJSON(apiBase, &data); err != nil {
+	if err := getJSON(paperAPIBaseURL, &data); err != nil {
 		return err
 	}
 
@@ -87,10 +84,10 @@ func (d *Downloader) DownloadPaper(version string) error {
 	}
 
 	latestBuild := data.Builds[len(data.Builds)-1]
-	fileName := fmt.Sprintf("paper-%s-%d.jar", version, latestBuild)
-	downloadURL := fmt.Sprintf("%s/builds/%d/downloads/%s", apiBase, latestBuild, fileName)
+	jarFileName := fmt.Sprintf("paper-%s-%d.jar", version, latestBuild)
+	jarDownloadURL := fmt.Sprintf("%s/builds/%d/downloads/%s", paperAPIBaseURL, latestBuild, jarFileName)
 
-	return d.DownloadFile(downloadURL, "server.jar")
+	return d.DownloadFile(jarDownloadURL, "server.jar")
 }
 
 func (d *Downloader) DownloadFabric(version string) error {
@@ -102,9 +99,9 @@ func (d *Downloader) DownloadFabric(version string) error {
 	}
 
 	loaderVersion := ""
-	for _, l := range loaders {
-		if l.Stable {
-			loaderVersion = l.Version
+	for _, loader := range loaders {
+		if loader.Stable {
+			loaderVersion = loader.Version
 			break
 		}
 	}
@@ -118,9 +115,9 @@ func (d *Downloader) DownloadFabric(version string) error {
 	}
 
 	installerVersion := ""
-	for _, i := range installers {
-		if i.Stable {
-			installerVersion = i.Version
+	for _, installer := range installers {
+		if installer.Stable {
+			installerVersion = installer.Version
 			break
 		}
 	}
@@ -130,45 +127,45 @@ func (d *Downloader) DownloadFabric(version string) error {
 
 	fmt.Printf("    -> Loader: %s | Installer: %s\n", loaderVersion, installerVersion)
 
-	downloadURL := fmt.Sprintf(
+	jarDownloadURL := fmt.Sprintf(
 		"https://meta.fabricmc.net/v2/versions/loader/%s/%s/%s/server/jar",
 		version, loaderVersion, installerVersion,
 	)
 
-	return d.DownloadFile(downloadURL, "server.jar")
+	return d.DownloadFile(jarDownloadURL, "server.jar")
 }
 
 func (d *Downloader) DownloadVanilla(version string) error {
-	manifestURL := "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+	versionManifestURL := "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 
 	var manifest MojangManifest
-	if err := getJSON(manifestURL, &manifest); err != nil {
+	if err := getJSON(versionManifestURL, &manifest); err != nil {
 		return err
 	}
 
-	var versionURL string
-	for _, v := range manifest.Versions {
-		if v.ID == version {
-			versionURL = v.URL
+	var versionDetailsURL string
+	for _, manifestVersion := range manifest.Versions {
+		if manifestVersion.ID == version {
+			versionDetailsURL = manifestVersion.URL
 			break
 		}
 	}
 
-	if versionURL == "" {
+	if versionDetailsURL == "" {
 		return fmt.Errorf("version %s not found in Mojang manifest", version)
 	}
 
 	var details MojangVersionDetails
-	if err := getJSON(versionURL, &details); err != nil {
+	if err := getJSON(versionDetailsURL, &details); err != nil {
 		return err
 	}
 
-	serverURL := details.Downloads.Server.URL
-	if serverURL == "" {
+	serverJarURL := details.Downloads.Server.URL
+	if serverJarURL == "" {
 		return fmt.Errorf("no server download available for %s", version)
 	}
 
-	return d.DownloadFile(serverURL, "server.jar")
+	return d.DownloadFile(serverJarURL, "server.jar")
 }
 
 func (d *Downloader) DownloadPlayit() error {
@@ -177,10 +174,6 @@ func (d *Downloader) DownloadPlayit() error {
 	return d.DownloadFile(url, "playit.exe")
 }
 
-// --- User Interaction ---
-
-// PromptUser guía al usuario para elegir versión y tipo de servidor,
-// descarga el JAR y devuelve la metadata. Retorna nil si se cancela o hay error.
 func (d *Downloader) PromptUser() *DownloadResult {
 	reader := bufio.NewReader(os.Stdin)
 
@@ -234,21 +227,19 @@ func (d *Downloader) PromptUser() *DownloadResult {
 	return &DownloadResult{LoaderType: loaderType, MCVersion: version}
 }
 
-// --- Helpers ---
-
 func getJSON(url string, target interface{}) error {
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get(url)
+	httpClient := &http.Client{Timeout: 10 * time.Second}
+	response, err := httpClient.Get(url)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer response.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("API request failed with status: %d", resp.StatusCode)
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("API request failed with status: %d", response.StatusCode)
 	}
 
-	return json.NewDecoder(resp.Body).Decode(target)
+	return json.NewDecoder(response.Body).Decode(target)
 }
 
 type ProgressReader struct {

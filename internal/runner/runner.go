@@ -34,15 +34,15 @@ func (r *Runner) Start(instanceDir string) {
 
 	ramGB := r.resolveRAM(instanceDir)
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
 
 	for {
 		fmt.Printf("[*] INICIANDO SERVIDOR (%dGB RAM) en '%s'...\n", ramGB, instanceDir)
 
-		intentionalStop := r.runServerInstance(instanceDir, ramGB, sigChan)
+		wasStoppedIntentionally := r.runServerInstance(instanceDir, ramGB, signalChannel)
 
-		if intentionalStop {
+		if wasStoppedIntentionally {
 			fmt.Println("[*] Proceso de Manager finalizado limpiamente.")
 			break
 		}
@@ -51,7 +51,7 @@ func (r *Runner) Start(instanceDir string) {
 
 		select {
 		case <-time.After(10 * time.Second):
-		case <-sigChan:
+		case <-signalChannel:
 			fmt.Println("\n[*] Reinicio cancelado. Saliendo...")
 			return
 		}
@@ -68,17 +68,17 @@ func (r *Runner) resolveRAM(instanceDir string) int {
 	return r.cfg.RAMGB
 }
 
-func (r *Runner) runServerInstance(dir string, ramGB int, sigChan chan os.Signal) bool {
-	ramArg := fmt.Sprintf("-Xmx%dG", ramGB)
-	initialRamArg := fmt.Sprintf("-Xms%dG", ramGB)
+func (r *Runner) runServerInstance(dir string, ramGB int, signalChannel chan os.Signal) bool {
+	maxRAMArgument := fmt.Sprintf("-Xmx%dG", ramGB)
+	initialRAMArgument := fmt.Sprintf("-Xms%dG", ramGB)
 
-	cmd := exec.Command(r.cfg.JavaPath, ramArg, initialRamArg, "-jar", r.cfg.JarName, "nogui")
+	cmd := exec.Command(r.cfg.JavaPath, maxRAMArgument, initialRAMArgument, "-jar", r.cfg.JarName, "nogui")
 	cmd.Dir = dir
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	stdinPipe, err := cmd.StdinPipe()
+	serverInputPipe, err := cmd.StdinPipe()
 	if err != nil {
 		fmt.Printf("[-] Error obteniendo stdin: %v\n", err)
 		return false
@@ -90,16 +90,16 @@ func (r *Runner) runServerInstance(dir string, ramGB int, sigChan chan os.Signal
 	}
 
 	go func() {
-		io.Copy(stdinPipe, os.Stdin)
+		io.Copy(serverInputPipe, os.Stdin)
 	}()
 
-	done := make(chan error, 1)
+	serverExitChannel := make(chan error, 1)
 	go func() {
-		done <- cmd.Wait()
+		serverExitChannel <- cmd.Wait()
 	}()
 
 	select {
-	case err := <-done:
+	case err := <-serverExitChannel:
 		if err != nil {
 			fmt.Printf("[-] El servidor crasheó o se cerró con error: %v\n", err)
 			return false
@@ -108,10 +108,10 @@ func (r *Runner) runServerInstance(dir string, ramGB int, sigChan chan os.Signal
 		fmt.Println("[*] Servidor detenido correctamente (vía comando interno).")
 		return true
 
-	case <-sigChan:
+	case <-signalChannel:
 		fmt.Println("\n[*] Interrupción detectada (Ctrl+C). Guardando el mundo de forma segura...")
-		io.WriteString(stdinPipe, "stop\n")
-		<-done
+		io.WriteString(serverInputPipe, "stop\n")
+		<-serverExitChannel
 		return true
 	}
 }
