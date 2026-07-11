@@ -12,11 +12,8 @@ import (
 	"minecraft-manager/internal/updater"
 )
 
-// --- Menu de instancias ---
-
-// runMenuLoop muestra el menú de instancias hasta que se elija una para
-// iniciarla, se cancele (string vacío) o se salga. Actualizar el loader de
-// una instancia no debe cerrar el programa, así que vuelve a mostrar el menú.
+// Actualizar el loader de una instancia no debe cerrar el programa, así
+// que vuelve a mostrar el menú en vez de retornar.
 func runMenuLoop(reader *bufio.Reader, cfg *config.Config) string {
 	for {
 		selectedInstanceDir, action := selectInstanceFlow(reader, cfg)
