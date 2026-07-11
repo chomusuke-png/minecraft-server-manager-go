@@ -180,20 +180,25 @@ func (d *Downloader) DownloadPlayit(playitPath string) error {
 	return downloadTo(url, playitPath)
 }
 
-func (d *Downloader) PromptUser() *DownloadResult {
-	reader := bufio.NewReader(os.Stdin)
-
+func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 	fmt.Println("\n" + strings.Repeat("=", 40))
 	fmt.Println("   AUTOMATIC INSTALLATION SELECTOR")
 	fmt.Println(strings.Repeat("=", 40))
 
-	fmt.Print("[?] Enter Minecraft version (e.g., 1.20.1): ")
-	version, _ := reader.ReadString('\n')
-	version = strings.TrimSpace(version)
+	var version string
+	for {
+		fmt.Print("[?] Enter Minecraft version (e.g., 1.20.1): ")
+		v, err := reader.ReadString('\n')
+		version = strings.TrimSpace(v)
 
-	if version == "" {
-		fmt.Println("[!] Version cannot be empty.")
-		return nil
+		if err != nil {
+			fmt.Println("\n[-] No se pudo leer la entrada. Cancelado.")
+			return nil
+		}
+		if version != "" {
+			break
+		}
+		fmt.Println("[-] Entrada incorrecta, reintente.")
 	}
 
 	fmt.Printf("\nSelect server type for %s:\n", version)
@@ -202,9 +207,21 @@ func (d *Downloader) PromptUser() *DownloadResult {
 	fmt.Println("3) Vanilla")
 	fmt.Println("4) Cancel")
 
-	fmt.Print("\n[?] Option [1-4]: ")
-	choice, _ := reader.ReadString('\n')
-	choice = strings.TrimSpace(choice)
+	var choice string
+	for {
+		fmt.Print("\n[?] Option [1-4]: ")
+		c, readErr := reader.ReadString('\n')
+		choice = strings.TrimSpace(c)
+
+		if readErr != nil {
+			fmt.Println("\n[-] No se pudo leer la entrada. Cancelado.")
+			return nil
+		}
+		if choice == "1" || choice == "2" || choice == "3" || choice == "4" {
+			break
+		}
+		fmt.Println("[-] Entrada incorrecta, reintente.")
+	}
 
 	var err error
 	var loaderType string
@@ -219,7 +236,7 @@ func (d *Downloader) PromptUser() *DownloadResult {
 	case "3":
 		loaderType = "vanilla"
 		err = d.DownloadVanilla(version)
-	default:
+	case "4":
 		fmt.Println("[*] Cancelled.")
 		return nil
 	}
