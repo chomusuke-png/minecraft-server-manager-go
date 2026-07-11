@@ -10,6 +10,7 @@ import (
 	"minecraft-manager/internal/config"
 	"minecraft-manager/internal/downloader"
 	"minecraft-manager/internal/instance"
+	"minecraft-manager/internal/logx"
 )
 
 func ensureServerJar(reader *bufio.Reader, dir string, cfg *config.Config, dl *downloader.Downloader) bool {
@@ -19,7 +20,7 @@ func ensureServerJar(reader *bufio.Reader, dir string, cfg *config.Config, dl *d
 		return true
 	}
 
-	fmt.Printf("[!] No se encontró '%s' en '%s'.\n", cfg.JarName, dir)
+	logx.Warn("No se encontró '%s' en '%s'.", cfg.JarName, dir)
 
 	if !askYesNo(reader, "[?] ¿Descargar servidor automáticamente?") {
 		cleanIncompleteInstance(dir)
@@ -40,7 +41,7 @@ func ensureServerJar(reader *bufio.Reader, dir string, cfg *config.Config, dl *d
 	meta.MCVersion = result.MCVersion
 
 	if err := instance.SaveMeta(dir, *meta); err != nil {
-		fmt.Printf("[!] Advertencia: no se pudo guardar instance.json: %v\n", err)
+		logx.Warn("Advertencia: no se pudo guardar instance.json: %v", err)
 	}
 
 	return true
@@ -59,10 +60,10 @@ func cleanIncompleteInstance(dir string) {
 	}
 
 	if err := os.RemoveAll(dir); err != nil {
-		fmt.Printf("[!] No se pudo limpiar instancia incompleta: %v\n", err)
+		logx.Warn("No se pudo limpiar instancia incompleta: %v", err)
 		return
 	}
-	fmt.Println("[*] Instancia incompleta eliminada.")
+	logx.Info("Instancia incompleta eliminada.")
 }
 
 func ensurePlayit(reader *bufio.Reader, cfg *config.Config, dl *downloader.Downloader) {
@@ -70,13 +71,13 @@ func ensurePlayit(reader *bufio.Reader, cfg *config.Config, dl *downloader.Downl
 		return
 	}
 
-	fmt.Printf("[!] No se encontró '%s'.\n", cfg.PlayitPath)
+	logx.Warn("No se encontró '%s'.", cfg.PlayitPath)
 	if askYesNo(reader, "[?] ¿Deseas descargar Playit.gg automáticamente?") {
 		if err := dl.DownloadPlayit(cfg.PlayitPath); err != nil {
-			fmt.Printf("[-] Error descargando Playit: %v\n", err)
+			logx.Error("Error descargando Playit: %v", err)
 		}
 	} else {
-		fmt.Println("[!] Continuando en modo LAN (sin túnel).")
+		logx.Warn("Continuando en modo LAN (sin túnel).")
 	}
 }
 
@@ -99,10 +100,10 @@ func askYesNo(reader *bufio.Reader, question string) bool {
 		}
 
 		if err != nil {
-			fmt.Println("\n[-] No se pudo leer la respuesta, se asume 'no'.")
+			logx.Error("\nNo se pudo leer la respuesta, se asume 'no'.")
 			return false
 		}
 
-		fmt.Println("[-] Entrada incorrecta, reintente.")
+		logx.Error("Entrada incorrecta, reintente.")
 	}
 }

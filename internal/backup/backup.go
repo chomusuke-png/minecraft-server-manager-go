@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
+	"minecraft-manager/internal/logx"
 	"os"
 	"path/filepath"
 	"time"
@@ -41,7 +42,7 @@ func (bm *BackupManager) CreateBackup() error {
 	zipName := fmt.Sprintf("world_backup_%s.zip", timestamp)
 	zipPath := filepath.Join(bm.backupDir, zipName)
 
-	fmt.Printf("[*] Creando backup: %s...\n", zipName)
+	logx.Info("Creando backup: %s...", zipName)
 
 	file, err := os.Create(zipPath)
 	if err != nil {
@@ -84,21 +85,21 @@ func (bm *BackupManager) CreateBackup() error {
 		return fmt.Errorf("error comprimiendo archivos: %w", err)
 	}
 
-	fmt.Println("[+] Backup completado exitosamente.")
+	logx.Success("Backup completado exitosamente.")
 	return nil
 }
 
 func (bm *BackupManager) cleanOldBackups() {
 	files, err := os.ReadDir(bm.backupDir)
 	if err != nil {
-		fmt.Printf("[-] Error leyendo carpeta backups: %v\n", err)
+		logx.Error("Error leyendo carpeta backups: %v", err)
 		return
 	}
 
 	retentionDuration := time.Duration(bm.retentionDays) * 24 * time.Hour
 	cutoff := time.Now().Add(-retentionDuration)
 
-	fmt.Println("[*] Verificando backups antiguos...")
+	logx.Info("Verificando backups antiguos...")
 
 	count := 0
 	for _, file := range files {
@@ -114,15 +115,15 @@ func (bm *BackupManager) cleanOldBackups() {
 		if info.ModTime().Before(cutoff) {
 			backupFilePath := filepath.Join(bm.backupDir, file.Name())
 			if err := os.Remove(backupFilePath); err == nil {
-				fmt.Printf("    -> Eliminado: %s\n", file.Name())
+				logx.Detail("Eliminado: %s", file.Name())
 				count++
 			} else {
-				fmt.Printf("    [-] Error borrando %s: %v\n", file.Name(), err)
+				logx.Error("Error borrando %s: %v", file.Name(), err)
 			}
 		}
 	}
 
 	if count == 0 {
-		fmt.Println("    -> Ningún backup expirado.")
+		logx.Detail("Ningún backup expirado.")
 	}
 }

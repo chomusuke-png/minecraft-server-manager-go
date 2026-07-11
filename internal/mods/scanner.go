@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"minecraft-manager/internal/logx"
 	"os"
 	"path/filepath"
 )
@@ -24,11 +25,11 @@ func DisableClientMods(serverDir string) {
 
 	files, err := os.ReadDir(modsDir)
 	if err != nil {
-		fmt.Printf("[-] Error leyendo carpeta mods: %v\n", err)
+		logx.Error("Error leyendo carpeta mods: %v", err)
 		return
 	}
 
-	fmt.Println("[*] Escaneando mods incompatibles (Client-Side)...")
+	logx.Info("Escaneando mods incompatibles (Client-Side)...")
 	count := 0
 
 	for _, file := range files {
@@ -43,11 +44,11 @@ func DisableClientMods(serverDir string) {
 		}
 
 		if modEnvironment == "client" {
-			fmt.Printf("    -> DESHABILITANDO: %s (Es solo de cliente)\n", file.Name())
+			logx.Detail("DESHABILITANDO: %s (Es solo de cliente)", file.Name())
 
 			disabledModPath := modFilePath + ".disabled"
 			if err := os.Rename(modFilePath, disabledModPath); err != nil {
-				fmt.Printf("       [-] Error al deshabilitar: %v\n", err)
+				logx.Error("Error al deshabilitar: %v", err)
 			} else {
 				count++
 			}
@@ -55,9 +56,9 @@ func DisableClientMods(serverDir string) {
 	}
 
 	if count == 0 {
-		fmt.Println("    -> Todo limpio. No se encontraron mods exclusivos de cliente.")
+		logx.Detail("Todo limpio. No se encontraron mods exclusivos de cliente.")
 	} else {
-		fmt.Printf("    -> Se deshabilitaron %d mods incompatibles.\n", count)
+		logx.Detail("Se deshabilitaron %d mods incompatibles.", count)
 	}
 }
 

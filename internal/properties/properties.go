@@ -3,6 +3,7 @@ package properties
 import (
 	"bufio"
 	"fmt"
+	"minecraft-manager/internal/logx"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -16,7 +17,7 @@ func SetupInitialProperties(serverDir string) error {
 		return nil
 	}
 
-	fmt.Println("\n[*] Configuración Inicial del Mundo (server.properties)")
+	logx.Info("\nConfiguración Inicial del Mundo (server.properties)")
 	reader := bufio.NewReader(os.Stdin)
 
 	motd := promptString(reader, "[?] Nombre/Mensaje del servidor (MOTD)", "Un servidor de Minecraft")
@@ -35,7 +36,7 @@ func SetupInitialProperties(serverDir string) error {
 		return fmt.Errorf("failed to write server.properties: %w", err)
 	}
 
-	fmt.Println("[+] Archivo server.properties generado exitosamente.")
+	logx.Success("Archivo server.properties generado exitosamente.")
 	return nil
 }
 
@@ -65,7 +66,7 @@ func promptOptions(reader *bufio.Reader, message string, validOptions []string, 
 				return input
 			}
 		}
-		fmt.Printf("[-] Opción inválida. Valores permitidos: %v\n", validOptions)
+		logx.Error("Opción inválida. Valores permitidos: %v", validOptions)
 	}
 }
 
@@ -83,7 +84,7 @@ func promptInt(reader *bufio.Reader, message string, defaultValue int) int {
 		if err == nil && parsedValue > 0 {
 			return parsedValue
 		}
-		fmt.Println("[-] Error: Por favor, ingresa un número entero válido mayor a 0.")
+		logx.Error("Error: Por favor, ingresa un número entero válido mayor a 0.")
 	}
 }
 
@@ -110,6 +111,6 @@ func promptBoolean(reader *bufio.Reader, message string, defaultValue bool) bool
 			return false
 		}
 
-		fmt.Println("[-] Error: Responde 'true' o 'false'.")
+		logx.Error("Error: Responde 'true' o 'false'.")
 	}
 }

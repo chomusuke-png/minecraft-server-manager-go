@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"minecraft-manager/internal/logx"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,7 +20,7 @@ func EnsureEulaAccepted(serverDir string) error {
 		}
 	}
 
-	fmt.Println("\n[!] El EULA de Minecraft no ha sido aceptado.")
+	logx.Warn("\nEl EULA de Minecraft no ha sido aceptado.")
 
 	accepted := false
 	for {
@@ -30,7 +31,7 @@ func EnsureEulaAccepted(serverDir string) error {
 			if errors.Is(err, io.EOF) {
 				return fmt.Errorf("no se pudo leer la respuesta: %w", err)
 			}
-			fmt.Println("[-] Entrada incorrecta, reintente.")
+			logx.Error("Entrada incorrecta, reintente.")
 			continue
 		}
 
@@ -40,7 +41,7 @@ func EnsureEulaAccepted(serverDir string) error {
 		case "n", "no":
 			accepted = false
 		default:
-			fmt.Println("[-] Entrada incorrecta, reintente.")
+			logx.Error("Entrada incorrecta, reintente.")
 			continue
 		}
 		break
