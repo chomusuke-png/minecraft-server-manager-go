@@ -1,8 +1,0 @@
-{
-    "java_path": "java",
-    "jar_name": "server.jar",
-    "ram_gb": 4,
-    "playit_path": "playit.exe",
-    "backup_retention_days": 7,
-    "port": 25565
-}
