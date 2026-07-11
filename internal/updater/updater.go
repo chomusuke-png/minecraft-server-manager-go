@@ -41,10 +41,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 		newVersion = input
 	}
 
-	newLoaderType, err := promptLoaderType(reader, meta.LoaderType)
-	if err != nil {
-		return err
-	}
+	newLoaderType := promptLoaderType(reader, meta.LoaderType)
 
 	updatedRAMGB := instance.PromptRAMUpdate(reader, meta.RAMGB)
 
@@ -77,28 +74,29 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 	return nil
 }
 
-func promptLoaderType(reader *bufio.Reader, current string) (string, error) {
+func promptLoaderType(reader *bufio.Reader, current string) string {
 	fmt.Printf("\n[?] Tipo de loader (Enter para mantener '%s'):\n", current)
 	fmt.Println("  1) Paper")
 	fmt.Println("  2) Fabric")
 	fmt.Println("  3) Vanilla")
-	fmt.Print("\n[?] Opción (Enter para mantener actual): ")
 
-	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(input)
+	for {
+		fmt.Print("\n[?] Opción (Enter para mantener actual): ")
 
-	if input == "" {
-		return current, nil
-	}
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
 
-	switch input {
-	case "1":
-		return "paper", nil
-	case "2":
-		return "fabric", nil
-	case "3":
-		return "vanilla", nil
-	default:
-		return "", fmt.Errorf("opción inválida: %s", input)
+		switch input {
+		case "":
+			return current
+		case "1":
+			return "paper"
+		case "2":
+			return "fabric"
+		case "3":
+			return "vanilla"
+		}
+
+		fmt.Println("[-] Entrada incorrecta, reintente.")
 	}
 }

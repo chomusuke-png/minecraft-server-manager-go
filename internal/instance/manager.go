@@ -34,21 +34,34 @@ func GetAvailableInstances() ([]string, error) {
 }
 
 func CreateInstance(reader *bufio.Reader, defaultRAMGB int) (string, int, error) {
-	fmt.Print("\n[?] Nombre para la nueva instancia (sin espacios): ")
-	name, _ := reader.ReadString('\n')
-	name = strings.TrimSpace(name)
+	var name, instancePath string
+	for {
+		fmt.Print("\n[?] Nombre para la nueva instancia (sin espacios): ")
+		var readErr error
+		name, readErr = reader.ReadString('\n')
+		name = strings.TrimSpace(name)
 
-	if name == "" {
-		return "", 0, fmt.Errorf("el nombre no puede estar vacío")
-	}
+		if readErr != nil {
+			return "", 0, fmt.Errorf("no se pudo leer la entrada: %w", readErr)
+		}
 
-	if strings.Contains(name, " ") || strings.Contains(name, "..") || strings.Contains(name, "/") || strings.Contains(name, "\\") {
-		return "", 0, fmt.Errorf("nombre inválido (usa solo letras, números, guiones)")
-	}
+		if name == "" {
+			fmt.Println("[-] El nombre no puede estar vacío. Entrada incorrecta, reintente.")
+			continue
+		}
 
-	instancePath := filepath.Join(InstancesRootDir, name)
-	if _, err := os.Stat(instancePath); err == nil {
-		return "", 0, fmt.Errorf("la instancia '%s' ya existe", name)
+		if strings.Contains(name, " ") || strings.Contains(name, "..") || strings.Contains(name, "/") || strings.Contains(name, "\\") {
+			fmt.Println("[-] Nombre inválido (usa solo letras, números, guiones). Entrada incorrecta, reintente.")
+			continue
+		}
+
+		instancePath = filepath.Join(InstancesRootDir, name)
+		if _, err := os.Stat(instancePath); err == nil {
+			fmt.Printf("[-] La instancia '%s' ya existe. Entrada incorrecta, reintente.\n", name)
+			continue
+		}
+
+		break
 	}
 
 	ramGB := promptRAM(reader, defaultRAMGB)
