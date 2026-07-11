@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"minecraft-manager/internal/logx"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -36,7 +37,7 @@ func (d *Downloader) DownloadFile(url string, filename string) error {
 }
 
 func downloadTo(url string, destinationPath string) error {
-	fmt.Printf("[*] Downloading from: %s\n", url)
+	logx.Info("Downloading from: %s", url)
 
 	response, err := http.Get(url)
 	if err != nil {
@@ -64,12 +65,12 @@ func downloadTo(url string, destinationPath string) error {
 		return err
 	}
 
-	fmt.Println("\n[*] Download completed.")
+	logx.Info("\nDownload completed.")
 	return nil
 }
 
 func (d *Downloader) DownloadPaper(version string) error {
-	fmt.Printf("[*] Searching latest Paper build for %s...\n", version)
+	logx.Info("Searching latest Paper build for %s...", version)
 
 	paperAPIBaseURL := fmt.Sprintf("https://api.papermc.io/v2/projects/paper/versions/%s", version)
 
@@ -90,7 +91,7 @@ func (d *Downloader) DownloadPaper(version string) error {
 }
 
 func (d *Downloader) DownloadFabric(version string) error {
-	fmt.Printf("[*] Fetching Fabric installer for %s...\n", version)
+	logx.Info("Fetching Fabric installer for %s...", version)
 
 	var loaders []FabricLoader
 	if err := getJSON("https://meta.fabricmc.net/v2/versions/loader", &loaders); err != nil {
@@ -124,7 +125,7 @@ func (d *Downloader) DownloadFabric(version string) error {
 		installerVersion = "1.0.0"
 	}
 
-	fmt.Printf("    -> Loader: %s | Installer: %s\n", loaderVersion, installerVersion)
+	logx.Detail("Loader: %s | Installer: %s", loaderVersion, installerVersion)
 
 	jarDownloadURL := fmt.Sprintf(
 		"https://meta.fabricmc.net/v2/versions/loader/%s/%s/%s/server/jar",
@@ -168,7 +169,7 @@ func (d *Downloader) DownloadVanilla(version string) error {
 }
 
 func (d *Downloader) DownloadPlayit(playitPath string) error {
-	fmt.Println("[*] Downloading Playit.gg Agent...")
+	logx.Info("Downloading Playit.gg Agent...")
 	url := "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-windows-x86_64.exe"
 
 	if dir := filepath.Dir(playitPath); dir != "." {
@@ -192,13 +193,13 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 		version = strings.TrimSpace(v)
 
 		if err != nil {
-			fmt.Println("\n[-] No se pudo leer la entrada. Cancelado.")
+			logx.Error("\nNo se pudo leer la entrada. Cancelado.")
 			return nil
 		}
 		if version != "" {
 			break
 		}
-		fmt.Println("[-] Entrada incorrecta, reintente.")
+		logx.Error("Entrada incorrecta, reintente.")
 	}
 
 	fmt.Printf("\nSelect server type for %s:\n", version)
@@ -214,13 +215,13 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 		choice = strings.TrimSpace(c)
 
 		if readErr != nil {
-			fmt.Println("\n[-] No se pudo leer la entrada. Cancelado.")
+			logx.Error("\nNo se pudo leer la entrada. Cancelado.")
 			return nil
 		}
 		if choice == "1" || choice == "2" || choice == "3" || choice == "4" {
 			break
 		}
-		fmt.Println("[-] Entrada incorrecta, reintente.")
+		logx.Error("Entrada incorrecta, reintente.")
 	}
 
 	var err error
@@ -237,16 +238,16 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 		loaderType = "vanilla"
 		err = d.DownloadVanilla(version)
 	case "4":
-		fmt.Println("[*] Cancelled.")
+		logx.Info("Cancelled.")
 		return nil
 	}
 
 	if err != nil {
-		fmt.Printf("\n[-] Error installing server: %v\n", err)
+		logx.Error("\nError installing server: %v", err)
 		return nil
 	}
 
-	fmt.Printf("[+] Success! 'server.jar' installed for version %s.\n", version)
+	logx.Success("Success! 'server.jar' installed for version %s.", version)
 	return &DownloadResult{LoaderType: loaderType, MCVersion: version}
 }
 

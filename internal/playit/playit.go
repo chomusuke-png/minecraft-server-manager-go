@@ -3,6 +3,7 @@ package playit
 import (
 	"fmt"
 	"minecraft-manager/internal/config"
+	"minecraft-manager/internal/logx"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,7 +26,7 @@ func (tm *TunnelManager) Start(cfg *config.Config) error {
 		return fmt.Errorf("error obteniendo ruta absoluta: %w", err)
 	}
 
-	fmt.Println("[*] Lanzando Playit...")
+	logx.Info("Lanzando Playit...")
 
 	cmd := exec.Command("cmd", "/C", "start", "Playit Tunnel", absolutePlayitPath)
 
@@ -37,7 +38,7 @@ func (tm *TunnelManager) Start(cfg *config.Config) error {
 }
 
 func (tm *TunnelManager) Stop() {
-	fmt.Println("[*] Cerrando ventanas de Playit...")
+	logx.Info("Cerrando ventanas de Playit...")
 
 	killCommand := exec.Command("taskkill", "/F", "/IM", "playit.exe")
 

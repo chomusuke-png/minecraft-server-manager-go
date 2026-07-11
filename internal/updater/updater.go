@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"minecraft-manager/internal/downloader"
 	"minecraft-manager/internal/instance"
+	"minecraft-manager/internal/logx"
 	"strings"
 )
 
@@ -30,7 +31,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 	if meta.RAMGB > 0 {
 		ramDisplay = fmt.Sprintf("%dGB", meta.RAMGB)
 	}
-	fmt.Printf("\n[*] Instancia actual: %s %s | RAM: %s\n", meta.LoaderType, meta.MCVersion, ramDisplay)
+	logx.Info("\nInstancia actual: %s %s | RAM: %s", meta.LoaderType, meta.MCVersion, ramDisplay)
 
 	fmt.Printf("[?] Nueva versión de Minecraft (Enter para mantener '%s'): ", meta.MCVersion)
 	input, _ := reader.ReadString('\n')
@@ -47,7 +48,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 
 	serverDownloader := downloader.New(instanceDir)
 
-	fmt.Printf("[*] Descargando %s %s...\n", newLoaderType, newVersion)
+	logx.Info("Descargando %s %s...", newLoaderType, newVersion)
 	switch newLoaderType {
 	case "paper":
 		err = serverDownloader.DownloadPaper(newVersion)
@@ -67,10 +68,10 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 	meta.LoaderType = newLoaderType
 	meta.RAMGB = updatedRAMGB
 	if err := instance.SaveMeta(instanceDir, *meta); err != nil {
-		fmt.Printf("[!] Advertencia: no se pudo actualizar instance.json: %v\n", err)
+		logx.Warn("Advertencia: no se pudo actualizar instance.json: %v", err)
 	}
 
-	fmt.Printf("[+] Loader actualizado a %s %s exitosamente.\n", newLoaderType, newVersion)
+	logx.Success("Loader actualizado a %s %s exitosamente.", newLoaderType, newVersion)
 	return nil
 }
 
@@ -97,6 +98,6 @@ func promptLoaderType(reader *bufio.Reader, current string) string {
 			return "vanilla"
 		}
 
-		fmt.Println("[-] Entrada incorrecta, reintente.")
+		logx.Error("Entrada incorrecta, reintente.")
 	}
 }
