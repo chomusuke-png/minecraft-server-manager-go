@@ -62,10 +62,9 @@ func (r *Runner) Start(instanceDir string) {
 	}
 }
 
-// forwardStdin lee stdin una única vez durante toda la vida del proceso y
-// publica cada línea en el canal para que la instancia de servidor activa
-// la reenvíe a su pipe. Evita abrir un io.Copy(stdin) nuevo por reinicio,
-// que quedaba bloqueado para siempre leyendo un stdin que nunca se cierra.
+// Lee stdin una única vez durante toda la vida del proceso: abrir un
+// io.Copy(stdin) nuevo por cada reinicio dejaba goroutines bloqueadas
+// para siempre leyendo un stdin que nunca se cierra.
 func forwardStdin(lines chan<- string) {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {

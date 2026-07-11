@@ -12,8 +12,6 @@ import (
 	"minecraft-manager/internal/instance"
 )
 
-// --- Helpers ---
-
 func ensureServerJar(reader *bufio.Reader, dir string, cfg *config.Config, dl *downloader.Downloader) bool {
 	jarPath := filepath.Join(dir, cfg.JarName)
 

@@ -15,9 +15,6 @@ import (
 	"minecraft-manager/internal/runner"
 )
 
-// Run ejecuta el flujo completo del manager: selección/creación de
-// instancia, descarga del servidor, túnel de Playit, configuración
-// inicial, mantenimiento y arranque del servidor.
 func Run(cfg *config.Config) {
 	reader := bufio.NewReader(os.Stdin)
 
