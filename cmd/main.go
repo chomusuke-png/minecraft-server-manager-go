@@ -29,16 +29,9 @@ func main() {
 
 	reader := bufio.NewReader(os.Stdin)
 
-	selectedInstanceDir, action := selectInstanceFlow(reader, cfg)
+	selectedInstanceDir := runMenuLoop(reader, cfg)
 	if selectedInstanceDir == "" {
 		fmt.Println("[*] Operación cancelada.")
-		return
-	}
-
-	if action == "update" {
-		if err := updater.UpdateLoader(selectedInstanceDir, reader); err != nil {
-			fmt.Printf("[-] Error actualizando loader: %v\n", err)
-		}
 		return
 	}
 
@@ -82,6 +75,27 @@ func main() {
 }
 
 // --- Menu de instancias ---
+
+// runMenuLoop muestra el menú de instancias hasta que se elija una para
+// iniciarla, se cancele (string vacío) o se salga. Actualizar el loader de
+// una instancia no debe cerrar el programa, así que vuelve a mostrar el menú.
+func runMenuLoop(reader *bufio.Reader, cfg *config.Config) string {
+	for {
+		selectedInstanceDir, action := selectInstanceFlow(reader, cfg)
+		if selectedInstanceDir == "" {
+			return ""
+		}
+
+		if action == "update" {
+			if err := updater.UpdateLoader(selectedInstanceDir, reader); err != nil {
+				fmt.Printf("[-] Error actualizando loader: %v\n", err)
+			}
+			continue
+		}
+
+		return selectedInstanceDir
+	}
+}
 
 func selectInstanceFlow(reader *bufio.Reader, cfg *config.Config) (string, string) {
 	instances, err := instance.GetAvailableInstances()
