@@ -3,7 +3,10 @@ package app
 import (
 	"bufio"
 	"fmt"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -39,6 +42,8 @@ func selectInstanceFlow(reader *bufio.Reader, cfg *config.Config) (string, strin
 		logx.Error("Error leyendo instancias: %v", err)
 		return "", ""
 	}
+
+	clearScreen()
 
 	fmt.Println("\n" + strings.Repeat("=", 30))
 	fmt.Println("   SELECTOR DE INSTANCIAS")
@@ -100,6 +105,17 @@ func selectInstanceFlow(reader *bufio.Reader, cfg *config.Config) (string, strin
 			return filepath.Join(instance.InstancesRootDir, instances[idx-1]), ""
 		}
 	}
+}
+
+func clearScreen() {
+	var cmd *exec.Cmd
+	if runtime.GOOS == "windows" {
+		cmd = exec.Command("cmd", "/c", "cls")
+	} else {
+		cmd = exec.Command("clear")
+	}
+	cmd.Stdout = os.Stdout
+	cmd.Run()
 }
 
 func selectExistingInstance(reader *bufio.Reader, instances []string) string {
