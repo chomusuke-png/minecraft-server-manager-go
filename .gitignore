@@ -1,4 +1,2 @@
-instances
-backups
-playit.exe
-main.exe
+builds
+config.json

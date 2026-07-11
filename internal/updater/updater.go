@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"minecraft-manager/internal/downloader"
 	"minecraft-manager/internal/instance"
+	"minecraft-manager/internal/logx"
 	"strings"
 )
 
@@ -30,7 +31,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 	if meta.RAMGB > 0 {
 		ramDisplay = fmt.Sprintf("%dGB", meta.RAMGB)
 	}
-	fmt.Printf("\n[*] Instancia actual: %s %s | RAM: %s\n", meta.LoaderType, meta.MCVersion, ramDisplay)
+	logx.Info("\nInstancia actual: %s %s | RAM: %s", meta.LoaderType, meta.MCVersion, ramDisplay)
 
 	fmt.Printf("[?] Nueva versión de Minecraft (Enter para mantener '%s'): ", meta.MCVersion)
 	input, _ := reader.ReadString('\n')
@@ -41,23 +42,21 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 		newVersion = input
 	}
 
-	newLoaderType, err := promptLoaderType(reader, meta.LoaderType)
-	if err != nil {
-		return err
-	}
+	newLoaderType := promptLoaderType(reader, meta.LoaderType)
 
 	updatedRAMGB := instance.PromptRAMUpdate(reader, meta.RAMGB)
 
 	serverDownloader := downloader.New(instanceDir)
 
-	fmt.Printf("[*] Descargando %s %s...\n", newLoaderType, newVersion)
+	logx.Info("Descargando %s %s...", newLoaderType, newVersion)
+	var newLoaderVersion string
 	switch newLoaderType {
 	case "paper":
-		err = serverDownloader.DownloadPaper(newVersion)
+		newLoaderVersion, err = serverDownloader.DownloadPaper(newVersion)
 	case "fabric":
-		err = serverDownloader.DownloadFabric(newVersion)
+		newLoaderVersion, err = serverDownloader.DownloadFabric(newVersion)
 	case "vanilla":
-		err = serverDownloader.DownloadVanilla(newVersion)
+		newLoaderVersion, err = serverDownloader.DownloadVanilla(newVersion)
 	default:
 		return fmt.Errorf("tipo de loader desconocido: %s", newLoaderType)
 	}
@@ -68,37 +67,39 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 
 	meta.MCVersion = newVersion
 	meta.LoaderType = newLoaderType
+	meta.LoaderVersion = newLoaderVersion
 	meta.RAMGB = updatedRAMGB
 	if err := instance.SaveMeta(instanceDir, *meta); err != nil {
-		fmt.Printf("[!] Advertencia: no se pudo actualizar instance.json: %v\n", err)
+		logx.Warn("Advertencia: no se pudo actualizar instance.json: %v", err)
 	}
 
-	fmt.Printf("[+] Loader actualizado a %s %s exitosamente.\n", newLoaderType, newVersion)
+	logx.Success("Loader actualizado a %s %s exitosamente.", newLoaderType, newVersion)
 	return nil
 }
 
-func promptLoaderType(reader *bufio.Reader, current string) (string, error) {
+func promptLoaderType(reader *bufio.Reader, current string) string {
 	fmt.Printf("\n[?] Tipo de loader (Enter para mantener '%s'):\n", current)
 	fmt.Println("  1) Paper")
 	fmt.Println("  2) Fabric")
 	fmt.Println("  3) Vanilla")
-	fmt.Print("\n[?] Opción (Enter para mantener actual): ")
 
-	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(input)
+	for {
+		fmt.Print("\n[?] Opción (Enter para mantener actual): ")
 
-	if input == "" {
-		return current, nil
-	}
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
 
-	switch input {
-	case "1":
-		return "paper", nil
-	case "2":
-		return "fabric", nil
-	case "3":
-		return "vanilla", nil
-	default:
-		return "", fmt.Errorf("opción inválida: %s", input)
+		switch input {
+		case "":
+			return current
+		case "1":
+			return "paper"
+		case "2":
+			return "fabric"
+		case "3":
+			return "vanilla"
+		}
+
+		logx.Error("Entrada incorrecta, reintente.")
 	}
 }

@@ -3,6 +3,7 @@ package instance
 import (
 	"bufio"
 	"fmt"
+	"minecraft-manager/internal/logx"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -34,21 +35,34 @@ func GetAvailableInstances() ([]string, error) {
 }
 
 func CreateInstance(reader *bufio.Reader, defaultRAMGB int) (string, int, error) {
-	fmt.Print("\n[?] Nombre para la nueva instancia (sin espacios): ")
-	name, _ := reader.ReadString('\n')
-	name = strings.TrimSpace(name)
+	var name, instancePath string
+	for {
+		fmt.Print("\n[?] Nombre para la nueva instancia (sin espacios): ")
+		var readErr error
+		name, readErr = reader.ReadString('\n')
+		name = strings.TrimSpace(name)
 
-	if name == "" {
-		return "", 0, fmt.Errorf("el nombre no puede estar vacío")
-	}
+		if readErr != nil {
+			return "", 0, fmt.Errorf("no se pudo leer la entrada: %w", readErr)
+		}
 
-	if strings.Contains(name, " ") || strings.Contains(name, "..") || strings.Contains(name, "/") || strings.Contains(name, "\\") {
-		return "", 0, fmt.Errorf("nombre inválido (usa solo letras, números, guiones)")
-	}
+		if name == "" {
+			logx.Error("El nombre no puede estar vacío. Entrada incorrecta, reintente.")
+			continue
+		}
 
-	instancePath := filepath.Join(InstancesRootDir, name)
-	if _, err := os.Stat(instancePath); err == nil {
-		return "", 0, fmt.Errorf("la instancia '%s' ya existe", name)
+		if strings.Contains(name, " ") || strings.Contains(name, "..") || strings.Contains(name, "/") || strings.Contains(name, "\\") {
+			logx.Error("Nombre inválido (usa solo letras, números, guiones). Entrada incorrecta, reintente.")
+			continue
+		}
+
+		instancePath = filepath.Join(InstancesRootDir, name)
+		if _, err := os.Stat(instancePath); err == nil {
+			logx.Error("La instancia '%s' ya existe. Entrada incorrecta, reintente.", name)
+			continue
+		}
+
+		break
 	}
 
 	ramGB := promptRAM(reader, defaultRAMGB)
@@ -57,7 +71,7 @@ func CreateInstance(reader *bufio.Reader, defaultRAMGB int) (string, int, error)
 		return "", 0, fmt.Errorf("error creando directorio: %w", err)
 	}
 
-	fmt.Printf("[+] Instancia '%s' creada en '%s' con %dGB de RAM.\n", name, instancePath, ramGB)
+	logx.Success("Instancia '%s' creada en '%s' con %dGB de RAM.", name, instancePath, ramGB)
 	return instancePath, ramGB, nil
 }
 
@@ -75,7 +89,7 @@ func promptRAM(reader *bufio.Reader, defaultValue int) int {
 		if err == nil && value > 0 {
 			return value
 		}
-		fmt.Println("[-] Error: ingresá un número entero válido mayor a 0.")
+		logx.Error("Error: ingresá un número entero válido mayor a 0.")
 	}
 }
 
@@ -110,6 +124,6 @@ func PromptRAMUpdate(reader *bufio.Reader, current int) int {
 		return value
 	}
 
-	fmt.Println("[-] Valor inválido, se mantiene el anterior.")
+	logx.Error("Valor inválido, se mantiene el anterior.")
 	return current
 }

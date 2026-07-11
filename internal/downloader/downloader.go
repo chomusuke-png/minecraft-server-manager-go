@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"minecraft-manager/internal/logx"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -17,8 +19,9 @@ type Downloader struct {
 }
 
 type DownloadResult struct {
-	LoaderType string
-	MCVersion  string
+	LoaderType    string
+	MCVersion     string
+	LoaderVersion string
 }
 
 func New(serverDir string) *Downloader {
@@ -32,12 +35,11 @@ func (d *Downloader) DownloadFile(url string, filename string) error {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	destinationPath := filepath.Join(d.serverDir, filename)
-	if filename == "playit.exe" {
-		destinationPath = filename
-	}
+	return downloadTo(url, filepath.Join(d.serverDir, filename))
+}
 
-	fmt.Printf("[*] Downloading from: %s\n", url)
+func downloadTo(url string, destinationPath string) error {
+	logx.Info("Downloading from: %s", url)
 
 	response, err := http.Get(url)
 	if err != nil {
@@ -65,37 +67,40 @@ func (d *Downloader) DownloadFile(url string, filename string) error {
 		return err
 	}
 
-	fmt.Println("\n[*] Download completed.")
+	logx.Info("\nDownload completed.")
 	return nil
 }
 
-func (d *Downloader) DownloadPaper(version string) error {
-	fmt.Printf("[*] Searching latest Paper build for %s...\n", version)
+func (d *Downloader) DownloadPaper(version string) (string, error) {
+	logx.Info("Searching latest Paper build for %s...", version)
 
 	paperAPIBaseURL := fmt.Sprintf("https://api.papermc.io/v2/projects/paper/versions/%s", version)
 
 	var data PaperBuildsResponse
 	if err := getJSON(paperAPIBaseURL, &data); err != nil {
-		return err
+		return "", err
 	}
 
 	if len(data.Builds) == 0 {
-		return fmt.Errorf("no builds found for version %s", version)
+		return "", fmt.Errorf("no builds found for version %s", version)
 	}
 
 	latestBuild := data.Builds[len(data.Builds)-1]
 	jarFileName := fmt.Sprintf("paper-%s-%d.jar", version, latestBuild)
 	jarDownloadURL := fmt.Sprintf("%s/builds/%d/downloads/%s", paperAPIBaseURL, latestBuild, jarFileName)
 
-	return d.DownloadFile(jarDownloadURL, "server.jar")
+	if err := d.DownloadFile(jarDownloadURL, "server.jar"); err != nil {
+		return "", err
+	}
+	return strconv.Itoa(latestBuild), nil
 }
 
-func (d *Downloader) DownloadFabric(version string) error {
-	fmt.Printf("[*] Fetching Fabric installer for %s...\n", version)
+func (d *Downloader) DownloadFabric(version string) (string, error) {
+	logx.Info("Fetching Fabric installer for %s...", version)
 
 	var loaders []FabricLoader
 	if err := getJSON("https://meta.fabricmc.net/v2/versions/loader", &loaders); err != nil {
-		return fmt.Errorf("error fetching loaders: %w", err)
+		return "", fmt.Errorf("error fetching loaders: %w", err)
 	}
 
 	loaderVersion := ""
@@ -111,7 +116,7 @@ func (d *Downloader) DownloadFabric(version string) error {
 
 	var installers []FabricInstaller
 	if err := getJSON("https://meta.fabricmc.net/v2/versions/installer", &installers); err != nil {
-		return fmt.Errorf("error fetching installers: %w", err)
+		return "", fmt.Errorf("error fetching installers: %w", err)
 	}
 
 	installerVersion := ""
@@ -125,22 +130,25 @@ func (d *Downloader) DownloadFabric(version string) error {
 		installerVersion = "1.0.0"
 	}
 
-	fmt.Printf("    -> Loader: %s | Installer: %s\n", loaderVersion, installerVersion)
+	logx.Detail("Loader: %s | Installer: %s", loaderVersion, installerVersion)
 
 	jarDownloadURL := fmt.Sprintf(
 		"https://meta.fabricmc.net/v2/versions/loader/%s/%s/%s/server/jar",
 		version, loaderVersion, installerVersion,
 	)
 
-	return d.DownloadFile(jarDownloadURL, "server.jar")
+	if err := d.DownloadFile(jarDownloadURL, "server.jar"); err != nil {
+		return "", err
+	}
+	return loaderVersion, nil
 }
 
-func (d *Downloader) DownloadVanilla(version string) error {
+func (d *Downloader) DownloadVanilla(version string) (string, error) {
 	versionManifestURL := "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 
 	var manifest MojangManifest
 	if err := getJSON(versionManifestURL, &manifest); err != nil {
-		return err
+		return "", err
 	}
 
 	var versionDetailsURL string
@@ -152,42 +160,57 @@ func (d *Downloader) DownloadVanilla(version string) error {
 	}
 
 	if versionDetailsURL == "" {
-		return fmt.Errorf("version %s not found in Mojang manifest", version)
+		return "", fmt.Errorf("version %s not found in Mojang manifest", version)
 	}
 
 	var details MojangVersionDetails
 	if err := getJSON(versionDetailsURL, &details); err != nil {
-		return err
+		return "", err
 	}
 
 	serverJarURL := details.Downloads.Server.URL
 	if serverJarURL == "" {
-		return fmt.Errorf("no server download available for %s", version)
+		return "", fmt.Errorf("no server download available for %s", version)
 	}
 
-	return d.DownloadFile(serverJarURL, "server.jar")
+	if err := d.DownloadFile(serverJarURL, "server.jar"); err != nil {
+		return "", err
+	}
+	return "", nil
 }
 
-func (d *Downloader) DownloadPlayit() error {
-	fmt.Println("[*] Downloading Playit.gg Agent...")
+func (d *Downloader) DownloadPlayit(playitPath string) error {
+	logx.Info("Downloading Playit.gg Agent...")
 	url := "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-windows-x86_64.exe"
-	return d.DownloadFile(url, "playit.exe")
+
+	if dir := filepath.Dir(playitPath); dir != "." {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory: %w", err)
+		}
+	}
+
+	return downloadTo(url, playitPath)
 }
 
-func (d *Downloader) PromptUser() *DownloadResult {
-	reader := bufio.NewReader(os.Stdin)
-
+func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 	fmt.Println("\n" + strings.Repeat("=", 40))
 	fmt.Println("   AUTOMATIC INSTALLATION SELECTOR")
 	fmt.Println(strings.Repeat("=", 40))
 
-	fmt.Print("[?] Enter Minecraft version (e.g., 1.20.1): ")
-	version, _ := reader.ReadString('\n')
-	version = strings.TrimSpace(version)
+	var version string
+	for {
+		fmt.Print("[?] Enter Minecraft version (e.g., 1.20.1): ")
+		v, err := reader.ReadString('\n')
+		version = strings.TrimSpace(v)
 
-	if version == "" {
-		fmt.Println("[!] Version cannot be empty.")
-		return nil
+		if err != nil {
+			logx.Error("\nNo se pudo leer la entrada. Cancelado.")
+			return nil
+		}
+		if version != "" {
+			break
+		}
+		logx.Error("Entrada incorrecta, reintente.")
 	}
 
 	fmt.Printf("\nSelect server type for %s:\n", version)
@@ -196,35 +219,48 @@ func (d *Downloader) PromptUser() *DownloadResult {
 	fmt.Println("3) Vanilla")
 	fmt.Println("4) Cancel")
 
-	fmt.Print("\n[?] Option [1-4]: ")
-	choice, _ := reader.ReadString('\n')
-	choice = strings.TrimSpace(choice)
+	var choice string
+	for {
+		fmt.Print("\n[?] Option [1-4]: ")
+		c, readErr := reader.ReadString('\n')
+		choice = strings.TrimSpace(c)
+
+		if readErr != nil {
+			logx.Error("\nNo se pudo leer la entrada. Cancelado.")
+			return nil
+		}
+		if choice == "1" || choice == "2" || choice == "3" || choice == "4" {
+			break
+		}
+		logx.Error("Entrada incorrecta, reintente.")
+	}
 
 	var err error
 	var loaderType string
+	var loaderVersion string
 
 	switch choice {
 	case "1":
 		loaderType = "paper"
-		err = d.DownloadPaper(version)
+		loaderVersion, err = d.DownloadPaper(version)
 	case "2":
 		loaderType = "fabric"
-		err = d.DownloadFabric(version)
+		loaderVersion, err = d.DownloadFabric(version)
 	case "3":
 		loaderType = "vanilla"
-		err = d.DownloadVanilla(version)
-	default:
-		fmt.Println("[*] Cancelled.")
+		loaderVersion, err = d.DownloadVanilla(version)
+	case "4":
+		logx.Info("Cancelled.")
 		return nil
 	}
 
 	if err != nil {
-		fmt.Printf("\n[-] Error installing server: %v\n", err)
+		logx.Error("\nError installing server: %v", err)
 		return nil
 	}
 
-	fmt.Printf("[+] Success! 'server.jar' installed for version %s.\n", version)
-	return &DownloadResult{LoaderType: loaderType, MCVersion: version}
+	logx.Success("Success! 'server.jar' installed for version %s.", version)
+	return &DownloadResult{LoaderType: loaderType, MCVersion: version, LoaderVersion: loaderVersion}
 }
 
 func getJSON(url string, target interface{}) error {
