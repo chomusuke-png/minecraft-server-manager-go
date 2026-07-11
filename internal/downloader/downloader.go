@@ -32,11 +32,10 @@ func (d *Downloader) DownloadFile(url string, filename string) error {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	destinationPath := filepath.Join(d.serverDir, filename)
-	if filename == "playit.exe" {
-		destinationPath = filename
-	}
+	return downloadTo(url, filepath.Join(d.serverDir, filename))
+}
 
+func downloadTo(url string, destinationPath string) error {
 	fmt.Printf("[*] Downloading from: %s\n", url)
 
 	response, err := http.Get(url)
@@ -168,10 +167,17 @@ func (d *Downloader) DownloadVanilla(version string) error {
 	return d.DownloadFile(serverJarURL, "server.jar")
 }
 
-func (d *Downloader) DownloadPlayit() error {
+func (d *Downloader) DownloadPlayit(playitPath string) error {
 	fmt.Println("[*] Downloading Playit.gg Agent...")
 	url := "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-windows-x86_64.exe"
-	return d.DownloadFile(url, "playit.exe")
+
+	if dir := filepath.Dir(playitPath); dir != "." {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory: %w", err)
+		}
+	}
+
+	return downloadTo(url, playitPath)
 }
 
 func (d *Downloader) PromptUser() *DownloadResult {
