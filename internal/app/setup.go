@@ -39,6 +39,7 @@ func ensureServerJar(reader *bufio.Reader, dir string, cfg *config.Config, dl *d
 	}
 	meta.LoaderType = result.LoaderType
 	meta.MCVersion = result.MCVersion
+	meta.LoaderVersion = result.LoaderVersion
 
 	if err := instance.SaveMeta(dir, *meta); err != nil {
 		logx.Warn("Advertencia: no se pudo guardar instance.json: %v", err)

@@ -49,13 +49,14 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 	serverDownloader := downloader.New(instanceDir)
 
 	logx.Info("Descargando %s %s...", newLoaderType, newVersion)
+	var newLoaderVersion string
 	switch newLoaderType {
 	case "paper":
-		err = serverDownloader.DownloadPaper(newVersion)
+		newLoaderVersion, err = serverDownloader.DownloadPaper(newVersion)
 	case "fabric":
-		err = serverDownloader.DownloadFabric(newVersion)
+		newLoaderVersion, err = serverDownloader.DownloadFabric(newVersion)
 	case "vanilla":
-		err = serverDownloader.DownloadVanilla(newVersion)
+		newLoaderVersion, err = serverDownloader.DownloadVanilla(newVersion)
 	default:
 		return fmt.Errorf("tipo de loader desconocido: %s", newLoaderType)
 	}
@@ -66,6 +67,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 
 	meta.MCVersion = newVersion
 	meta.LoaderType = newLoaderType
+	meta.LoaderVersion = newLoaderVersion
 	meta.RAMGB = updatedRAMGB
 	if err := instance.SaveMeta(instanceDir, *meta); err != nil {
 		logx.Warn("Advertencia: no se pudo actualizar instance.json: %v", err)

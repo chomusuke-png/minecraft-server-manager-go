@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -18,8 +19,9 @@ type Downloader struct {
 }
 
 type DownloadResult struct {
-	LoaderType string
-	MCVersion  string
+	LoaderType    string
+	MCVersion     string
+	LoaderVersion string
 }
 
 func New(serverDir string) *Downloader {
@@ -69,33 +71,36 @@ func downloadTo(url string, destinationPath string) error {
 	return nil
 }
 
-func (d *Downloader) DownloadPaper(version string) error {
+func (d *Downloader) DownloadPaper(version string) (string, error) {
 	logx.Info("Searching latest Paper build for %s...", version)
 
 	paperAPIBaseURL := fmt.Sprintf("https://api.papermc.io/v2/projects/paper/versions/%s", version)
 
 	var data PaperBuildsResponse
 	if err := getJSON(paperAPIBaseURL, &data); err != nil {
-		return err
+		return "", err
 	}
 
 	if len(data.Builds) == 0 {
-		return fmt.Errorf("no builds found for version %s", version)
+		return "", fmt.Errorf("no builds found for version %s", version)
 	}
 
 	latestBuild := data.Builds[len(data.Builds)-1]
 	jarFileName := fmt.Sprintf("paper-%s-%d.jar", version, latestBuild)
 	jarDownloadURL := fmt.Sprintf("%s/builds/%d/downloads/%s", paperAPIBaseURL, latestBuild, jarFileName)
 
-	return d.DownloadFile(jarDownloadURL, "server.jar")
+	if err := d.DownloadFile(jarDownloadURL, "server.jar"); err != nil {
+		return "", err
+	}
+	return strconv.Itoa(latestBuild), nil
 }
 
-func (d *Downloader) DownloadFabric(version string) error {
+func (d *Downloader) DownloadFabric(version string) (string, error) {
 	logx.Info("Fetching Fabric installer for %s...", version)
 
 	var loaders []FabricLoader
 	if err := getJSON("https://meta.fabricmc.net/v2/versions/loader", &loaders); err != nil {
-		return fmt.Errorf("error fetching loaders: %w", err)
+		return "", fmt.Errorf("error fetching loaders: %w", err)
 	}
 
 	loaderVersion := ""
@@ -111,7 +116,7 @@ func (d *Downloader) DownloadFabric(version string) error {
 
 	var installers []FabricInstaller
 	if err := getJSON("https://meta.fabricmc.net/v2/versions/installer", &installers); err != nil {
-		return fmt.Errorf("error fetching installers: %w", err)
+		return "", fmt.Errorf("error fetching installers: %w", err)
 	}
 
 	installerVersion := ""
@@ -132,15 +137,18 @@ func (d *Downloader) DownloadFabric(version string) error {
 		version, loaderVersion, installerVersion,
 	)
 
-	return d.DownloadFile(jarDownloadURL, "server.jar")
+	if err := d.DownloadFile(jarDownloadURL, "server.jar"); err != nil {
+		return "", err
+	}
+	return loaderVersion, nil
 }
 
-func (d *Downloader) DownloadVanilla(version string) error {
+func (d *Downloader) DownloadVanilla(version string) (string, error) {
 	versionManifestURL := "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 
 	var manifest MojangManifest
 	if err := getJSON(versionManifestURL, &manifest); err != nil {
-		return err
+		return "", err
 	}
 
 	var versionDetailsURL string
@@ -152,20 +160,23 @@ func (d *Downloader) DownloadVanilla(version string) error {
 	}
 
 	if versionDetailsURL == "" {
-		return fmt.Errorf("version %s not found in Mojang manifest", version)
+		return "", fmt.Errorf("version %s not found in Mojang manifest", version)
 	}
 
 	var details MojangVersionDetails
 	if err := getJSON(versionDetailsURL, &details); err != nil {
-		return err
+		return "", err
 	}
 
 	serverJarURL := details.Downloads.Server.URL
 	if serverJarURL == "" {
-		return fmt.Errorf("no server download available for %s", version)
+		return "", fmt.Errorf("no server download available for %s", version)
 	}
 
-	return d.DownloadFile(serverJarURL, "server.jar")
+	if err := d.DownloadFile(serverJarURL, "server.jar"); err != nil {
+		return "", err
+	}
+	return "", nil
 }
 
 func (d *Downloader) DownloadPlayit(playitPath string) error {
@@ -226,17 +237,18 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 
 	var err error
 	var loaderType string
+	var loaderVersion string
 
 	switch choice {
 	case "1":
 		loaderType = "paper"
-		err = d.DownloadPaper(version)
+		loaderVersion, err = d.DownloadPaper(version)
 	case "2":
 		loaderType = "fabric"
-		err = d.DownloadFabric(version)
+		loaderVersion, err = d.DownloadFabric(version)
 	case "3":
 		loaderType = "vanilla"
-		err = d.DownloadVanilla(version)
+		loaderVersion, err = d.DownloadVanilla(version)
 	case "4":
 		logx.Info("Cancelled.")
 		return nil
@@ -248,7 +260,7 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 	}
 
 	logx.Success("Success! 'server.jar' installed for version %s.", version)
-	return &DownloadResult{LoaderType: loaderType, MCVersion: version}
+	return &DownloadResult{LoaderType: loaderType, MCVersion: version, LoaderVersion: loaderVersion}
 }
 
 func getJSON(url string, target interface{}) error {
