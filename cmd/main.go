@@ -231,7 +231,7 @@ func ensurePlayit(cfg *config.Config, dl *downloader.Downloader) {
 
 	fmt.Printf("[!] No se encontró '%s'.\n", cfg.PlayitPath)
 	if askYesNo("[?] ¿Deseas descargar Playit.gg automáticamente?") {
-		if err := dl.DownloadPlayit(); err != nil {
+		if err := dl.DownloadPlayit(cfg.PlayitPath); err != nil {
 			fmt.Printf("[-] Error descargando Playit: %v\n", err)
 		}
 	} else {
