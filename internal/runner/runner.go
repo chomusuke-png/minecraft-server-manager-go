@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -37,10 +38,13 @@ func (r *Runner) Start(instanceDir string) {
 	signalChannel := make(chan os.Signal, 1)
 	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
 
+	stdinLines := make(chan string)
+	go forwardStdin(stdinLines)
+
 	for {
 		fmt.Printf("[*] INICIANDO SERVIDOR (%dGB RAM) en '%s'...\n", ramGB, instanceDir)
 
-		wasStoppedIntentionally := r.runServerInstance(instanceDir, ramGB, signalChannel)
+		wasStoppedIntentionally := r.runServerInstance(instanceDir, ramGB, signalChannel, stdinLines)
 
 		if wasStoppedIntentionally {
 			fmt.Println("[*] Proceso de Manager finalizado limpiamente.")
@@ -58,6 +62,18 @@ func (r *Runner) Start(instanceDir string) {
 	}
 }
 
+// forwardStdin lee stdin una única vez durante toda la vida del proceso y
+// publica cada línea en el canal para que la instancia de servidor activa
+// la reenvíe a su pipe. Evita abrir un io.Copy(stdin) nuevo por reinicio,
+// que quedaba bloqueado para siempre leyendo un stdin que nunca se cierra.
+func forwardStdin(lines chan<- string) {
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		lines <- scanner.Text() + "\n"
+	}
+	close(lines)
+}
+
 func (r *Runner) resolveRAM(instanceDir string) int {
 	meta, err := instance.LoadMeta(instanceDir)
 	if err == nil && meta.RAMGB > 0 {
@@ -68,7 +84,7 @@ func (r *Runner) resolveRAM(instanceDir string) int {
 	return r.cfg.RAMGB
 }
 
-func (r *Runner) runServerInstance(dir string, ramGB int, signalChannel chan os.Signal) bool {
+func (r *Runner) runServerInstance(dir string, ramGB int, signalChannel chan os.Signal, stdinLines <-chan string) bool {
 	maxRAMArgument := fmt.Sprintf("-Xmx%dG", ramGB)
 	initialRAMArgument := fmt.Sprintf("-Xms%dG", ramGB)
 
@@ -89,8 +105,23 @@ func (r *Runner) runServerInstance(dir string, ramGB int, signalChannel chan os.
 		return false
 	}
 
+	instanceDone := make(chan struct{})
+	defer close(instanceDone)
+
 	go func() {
-		io.Copy(serverInputPipe, os.Stdin)
+		for {
+			select {
+			case line, ok := <-stdinLines:
+				if !ok {
+					return
+				}
+				if _, err := io.WriteString(serverInputPipe, line); err != nil {
+					return
+				}
+			case <-instanceDone:
+				return
+			}
+		}
 	}()
 
 	serverExitChannel := make(chan error, 1)
