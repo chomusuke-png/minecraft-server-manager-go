@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -12,6 +13,7 @@ import (
 
 	"minecraft-manager/internal/config"
 	"minecraft-manager/internal/instance"
+	"minecraft-manager/internal/logx"
 )
 
 type Runner struct {
@@ -28,7 +30,7 @@ func (r *Runner) Start(instanceDir string) {
 	jarPath := filepath.Join(instanceDir, r.cfg.JarName)
 
 	if _, err := os.Stat(jarPath); os.IsNotExist(err) {
-		fmt.Printf("[-] Error: No se encuentra %s. Ejecuta el downloader primero.\n", jarPath)
+		logx.Error("Error: No se encuentra %s. Ejecuta el downloader primero.", jarPath)
 		return
 	}
 
@@ -37,38 +39,52 @@ func (r *Runner) Start(instanceDir string) {
 	signalChannel := make(chan os.Signal, 1)
 	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
 
-	for {
-		fmt.Printf("[*] INICIANDO SERVIDOR (%dGB RAM) en '%s'...\n", ramGB, instanceDir)
+	stdinLines := make(chan string)
+	go forwardStdin(stdinLines)
 
-		wasStoppedIntentionally := r.runServerInstance(instanceDir, ramGB, signalChannel)
+	for {
+		logx.Info("INICIANDO SERVIDOR (%dGB RAM) en '%s'...", ramGB, instanceDir)
+
+		wasStoppedIntentionally := r.runServerInstance(instanceDir, ramGB, signalChannel, stdinLines)
 
 		if wasStoppedIntentionally {
-			fmt.Println("[*] Proceso de Manager finalizado limpiamente.")
+			logx.Info("Proceso de Manager finalizado limpiamente.")
 			break
 		}
 
-		fmt.Println("[!] El servidor se detuvo de forma abrupta. Reiniciando en 10 segundos... (Ctrl+C para cancelar)")
+		logx.Warn("El servidor se detuvo de forma abrupta. Reiniciando en 10 segundos... (Ctrl+C para cancelar)")
 
 		select {
 		case <-time.After(10 * time.Second):
 		case <-signalChannel:
-			fmt.Println("\n[*] Reinicio cancelado. Saliendo...")
+			logx.Info("\nReinicio cancelado. Saliendo...")
 			return
 		}
 	}
 }
 
+// Lee stdin una única vez durante toda la vida del proceso: abrir un
+// io.Copy(stdin) nuevo por cada reinicio dejaba goroutines bloqueadas
+// para siempre leyendo un stdin que nunca se cierra.
+func forwardStdin(lines chan<- string) {
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		lines <- scanner.Text() + "\n"
+	}
+	close(lines)
+}
+
 func (r *Runner) resolveRAM(instanceDir string) int {
 	meta, err := instance.LoadMeta(instanceDir)
 	if err == nil && meta.RAMGB > 0 {
-		fmt.Printf("[*] RAM configurada por instancia: %dGB\n", meta.RAMGB)
+		logx.Info("RAM configurada por instancia: %dGB", meta.RAMGB)
 		return meta.RAMGB
 	}
-	fmt.Printf("[*] RAM configurada globalmente: %dGB\n", r.cfg.RAMGB)
+	logx.Info("RAM configurada globalmente: %dGB", r.cfg.RAMGB)
 	return r.cfg.RAMGB
 }
 
-func (r *Runner) runServerInstance(dir string, ramGB int, signalChannel chan os.Signal) bool {
+func (r *Runner) runServerInstance(dir string, ramGB int, signalChannel chan os.Signal, stdinLines <-chan string) bool {
 	maxRAMArgument := fmt.Sprintf("-Xmx%dG", ramGB)
 	initialRAMArgument := fmt.Sprintf("-Xms%dG", ramGB)
 
@@ -80,17 +96,32 @@ func (r *Runner) runServerInstance(dir string, ramGB int, signalChannel chan os.
 
 	serverInputPipe, err := cmd.StdinPipe()
 	if err != nil {
-		fmt.Printf("[-] Error obteniendo stdin: %v\n", err)
+		logx.Error("Error obteniendo stdin: %v", err)
 		return false
 	}
 
 	if err := cmd.Start(); err != nil {
-		fmt.Printf("[-] Error iniciando Java: %v\n", err)
+		logx.Error("Error iniciando Java: %v", err)
 		return false
 	}
 
+	instanceDone := make(chan struct{})
+	defer close(instanceDone)
+
 	go func() {
-		io.Copy(serverInputPipe, os.Stdin)
+		for {
+			select {
+			case line, ok := <-stdinLines:
+				if !ok {
+					return
+				}
+				if _, err := io.WriteString(serverInputPipe, line); err != nil {
+					return
+				}
+			case <-instanceDone:
+				return
+			}
+		}
 	}()
 
 	serverExitChannel := make(chan error, 1)
@@ -101,15 +132,15 @@ func (r *Runner) runServerInstance(dir string, ramGB int, signalChannel chan os.
 	select {
 	case err := <-serverExitChannel:
 		if err != nil {
-			fmt.Printf("[-] El servidor crasheó o se cerró con error: %v\n", err)
+			logx.Error("El servidor crasheó o se cerró con error: %v", err)
 			return false
 		}
 
-		fmt.Println("[*] Servidor detenido correctamente (vía comando interno).")
+		logx.Info("Servidor detenido correctamente (vía comando interno).")
 		return true
 
 	case <-signalChannel:
-		fmt.Println("\n[*] Interrupción detectada (Ctrl+C). Guardando el mundo de forma segura...")
+		logx.Info("\nInterrupción detectada (Ctrl+C). Guardando el mundo de forma segura...")
 		io.WriteString(serverInputPipe, "stop\n")
 		<-serverExitChannel
 		return true

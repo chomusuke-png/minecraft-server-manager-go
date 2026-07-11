@@ -1,7 +1,5 @@
 package downloader
 
-// --- Vanilla ---
-
 type MojangManifest struct {
 	Versions []MojangVersion `json:"versions"`
 }
@@ -19,13 +17,9 @@ type MojangVersionDetails struct {
 	} `json:"downloads"`
 }
 
-// --- PaperMC ---
-
 type PaperBuildsResponse struct {
 	Builds []int `json:"builds"`
 }
-
-// --- Fabric ---
 
 type FabricLoader struct {
 	Version string `json:"version"`

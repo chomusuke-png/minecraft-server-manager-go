@@ -1,13 +1,17 @@
 package eula
 
 import (
+	"errors"
 	"fmt"
+	"io"
+	"minecraft-manager/internal/logx"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 func EnsureEulaAccepted(serverDir string) error {
-	eulaPath := fmt.Sprintf("%s/eula.txt", serverDir)
+	eulaPath := filepath.Join(serverDir, "eula.txt")
 
 	content, err := os.ReadFile(eulaPath)
 	if err == nil {
@@ -16,13 +20,34 @@ func EnsureEulaAccepted(serverDir string) error {
 		}
 	}
 
-	fmt.Println("\n[!] El EULA de Minecraft no ha sido aceptado.")
-	fmt.Print("[?] ¿Aceptas el EULA? (y/n): ")
+	logx.Warn("\nEl EULA de Minecraft no ha sido aceptado.")
 
-	var response string
-	fmt.Scanln(&response)
+	accepted := false
+	for {
+		fmt.Print("[?] ¿Aceptas el EULA? (y/n): ")
 
-	if strings.ToLower(response) != "y" {
+		var response string
+		if _, err := fmt.Scanln(&response); err != nil {
+			if errors.Is(err, io.EOF) {
+				return fmt.Errorf("no se pudo leer la respuesta: %w", err)
+			}
+			logx.Error("Entrada incorrecta, reintente.")
+			continue
+		}
+
+		switch strings.ToLower(response) {
+		case "y", "s", "si", "yes":
+			accepted = true
+		case "n", "no":
+			accepted = false
+		default:
+			logx.Error("Entrada incorrecta, reintente.")
+			continue
+		}
+		break
+	}
+
+	if !accepted {
 		return fmt.Errorf("EULA rechazado por el usuario")
 	}
 
