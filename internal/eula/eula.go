@@ -3,11 +3,12 @@ package eula
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 func EnsureEulaAccepted(serverDir string) error {
-	eulaPath := fmt.Sprintf("%s/eula.txt", serverDir)
+	eulaPath := filepath.Join(serverDir, "eula.txt")
 
 	content, err := os.ReadFile(eulaPath)
 	if err == nil {
