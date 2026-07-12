@@ -34,7 +34,7 @@ func GetAvailableInstances() ([]string, error) {
 	return instances, nil
 }
 
-func CreateInstance(reader *bufio.Reader, defaultRAMGB int) (string, int, error) {
+func CreateInstance(reader *bufio.Reader, defaultRAMGB int) (string, int, int, error) {
 	var name, instancePath string
 	for {
 		fmt.Print("\n[?] Nombre para la nueva instancia (sin espacios): ")
@@ -43,7 +43,7 @@ func CreateInstance(reader *bufio.Reader, defaultRAMGB int) (string, int, error)
 		name = strings.TrimSpace(name)
 
 		if readErr != nil {
-			return "", 0, fmt.Errorf("no se pudo leer la entrada: %w", readErr)
+			return "", 0, 0, fmt.Errorf("no se pudo leer la entrada: %w", readErr)
 		}
 
 		if name == "" {
@@ -66,13 +66,14 @@ func CreateInstance(reader *bufio.Reader, defaultRAMGB int) (string, int, error)
 	}
 
 	ramGB := promptRAM(reader, defaultRAMGB)
+	port := promptPort(reader, 25565)
 
 	if err := os.MkdirAll(instancePath, 0755); err != nil {
-		return "", 0, fmt.Errorf("error creando directorio: %w", err)
+		return "", 0, 0, fmt.Errorf("error creando directorio: %w", err)
 	}
 
 	logx.Success("Instancia '%s' creada en '%s' con %dGB de RAM.", name, instancePath, ramGB)
-	return instancePath, ramGB, nil
+	return instancePath, ramGB, port, nil
 }
 
 func promptRAM(reader *bufio.Reader, defaultValue int) int {
@@ -90,6 +91,24 @@ func promptRAM(reader *bufio.Reader, defaultValue int) int {
 			return value
 		}
 		logx.Error("Error: ingresá un número entero válido mayor a 0.")
+	}
+}
+
+func promptPort(reader *bufio.Reader, defaultValue int) int {
+	for {
+		fmt.Printf("[?] Puerto del servidor (Enter para usar %d): ", defaultValue)
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
+
+		if input == "" {
+			return defaultValue
+		}
+
+		value, err := strconv.Atoi(input)
+		if err == nil && value > 0 && value <= 65535 {
+			return value
+		}
+		logx.Error("Error: ingresá un puerto válido (1-65535).")
 	}
 }
 

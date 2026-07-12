@@ -11,7 +11,6 @@ type Config struct {
 	RAMGB               int    `json:"ram_gb"`
 	PlayitPath          string `json:"playit_path"`
 	BackupRetentionDays int    `json:"backup_retention_days"`
-	Port                int    `json:"port"`
 }
 
 func DefaultConfig() *Config {
@@ -21,7 +20,6 @@ func DefaultConfig() *Config {
 		RAMGB:               4,
 		PlayitPath:          "playit.exe",
 		BackupRetentionDays: 7,
-		Port:                25565,
 	}
 }
 
