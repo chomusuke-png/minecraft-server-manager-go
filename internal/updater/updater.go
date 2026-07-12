@@ -31,7 +31,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 	if meta.RAMGB > 0 {
 		ramDisplay = fmt.Sprintf("%dGB", meta.RAMGB)
 	}
-	logx.Info("\nInstancia actual: %s %s | RAM: %s", meta.LoaderType, meta.MCVersion, ramDisplay)
+	logx.Info("\nInstancia actual: %s %s | RAM: %s | Puerto: %d", meta.LoaderType, meta.MCVersion, ramDisplay, meta.Port)
 
 	promptText := fmt.Sprintf("[?] Nueva versión de Minecraft (Enter para mantener '%s'): ", meta.MCVersion)
 	newVersion := prompt.LoopDefault(reader, promptText, meta.MCVersion, func(input string) (string, bool, string) {
@@ -41,6 +41,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 	newLoaderType := promptLoaderType(reader, meta.LoaderType)
 
 	updatedRAMGB := instance.PromptRAMUpdate(reader, meta.RAMGB)
+	updatedPort := instance.PromptPortUpdate(reader, meta.Port)
 
 	serverDownloader := downloader.New(instanceDir)
 
@@ -65,6 +66,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 	meta.LoaderType = newLoaderType
 	meta.LoaderVersion = newLoaderVersion
 	meta.RAMGB = updatedRAMGB
+	meta.Port = updatedPort
 	if err := instance.SaveMeta(instanceDir, *meta); err != nil {
 		logx.Warn("Advertencia: no se pudo actualizar instance.json: %v", err)
 	}

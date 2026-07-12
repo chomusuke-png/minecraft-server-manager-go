@@ -100,11 +100,15 @@ func PrintInstanceInfo(instanceDir string) {
 	if err != nil {
 		return
 	}
+
+	info := fmt.Sprintf("%s %s", meta.LoaderType, meta.MCVersion)
 	if meta.RAMGB > 0 {
-		fmt.Printf("    [%s %s | %dGB RAM]", meta.LoaderType, meta.MCVersion, meta.RAMGB)
-	} else {
-		fmt.Printf("    [%s %s]", meta.LoaderType, meta.MCVersion)
+		info += fmt.Sprintf(" | %dGB RAM", meta.RAMGB)
 	}
+	if meta.Port > 0 {
+		info += fmt.Sprintf(" | puerto %d", meta.Port)
+	}
+	fmt.Printf("    [%s]", info)
 }
 
 func PromptRAMUpdate(reader *bufio.Reader, current int) int {
@@ -117,6 +121,22 @@ func PromptRAMUpdate(reader *bufio.Reader, current int) int {
 		value, err := strconv.Atoi(input)
 		if err != nil || value <= 0 {
 			return 0, false, "Valor inválido, ingresá un número entero mayor a 0."
+		}
+		return value, true, ""
+	})
+}
+
+func PromptPortUpdate(reader *bufio.Reader, current int) int {
+	defaultPort := current
+	if defaultPort == 0 {
+		defaultPort = 25565
+	}
+
+	promptText := fmt.Sprintf("[?] Puerto del servidor (Enter para mantener %d): ", defaultPort)
+	return prompt.LoopDefault(reader, promptText, defaultPort, func(input string) (int, bool, string) {
+		value, err := strconv.Atoi(input)
+		if err != nil || value <= 0 || value > 65535 {
+			return 0, false, "Puerto inválido, ingresá un valor entre 1 y 65535."
 		}
 		return value, true, ""
 	})
