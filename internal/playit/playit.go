@@ -7,9 +7,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 )
 
+const createNewConsole = 0x00000010
+
 type TunnelManager struct {
+	pid int
 }
 
 func New() *TunnelManager {
@@ -28,19 +32,26 @@ func (tm *TunnelManager) Start(cfg *config.Config) error {
 
 	logx.Info("Lanzando Playit...")
 
-	cmd := exec.Command("cmd", "/C", "start", "Playit Tunnel", absolutePlayitPath)
+	cmd := exec.Command(absolutePlayitPath)
+	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: createNewConsole}
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("error al lanzar ventana de playit: %w", err)
 	}
 
+	tm.pid = cmd.Process.Pid
+
 	return nil
 }
 
 func (tm *TunnelManager) Stop() {
-	logx.Info("Cerrando ventanas de Playit...")
+	if tm.pid == 0 {
+		return
+	}
 
-	killCommand := exec.Command("taskkill", "/F", "/IM", "playit.exe")
+	logx.Info("Cerrando ventana de Playit...")
+
+	killCommand := exec.Command("taskkill", "/F", "/PID", fmt.Sprintf("%d", tm.pid), "/T")
 
 	killCommand.Stdout = nil
 	killCommand.Stderr = nil
