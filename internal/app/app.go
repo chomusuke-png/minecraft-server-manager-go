@@ -41,12 +41,12 @@ func Run(cfg *config.Config) {
 	}
 	defer tunnel.Stop()
 
-	if err := properties.SetupInitialProperties(selectedInstanceDir); err != nil {
+	if err := properties.SetupInitialProperties(reader, selectedInstanceDir); err != nil {
 		logx.Error("Error configurando propiedades: %v", err)
 		return
 	}
 
-	if err := eula.EnsureEulaAccepted(selectedInstanceDir); err != nil {
+	if err := eula.EnsureEulaAccepted(reader, selectedInstanceDir); err != nil {
 		logx.Error("Error con el EULA: %v", err)
 		return
 	}

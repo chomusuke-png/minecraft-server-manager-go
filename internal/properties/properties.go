@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func SetupInitialProperties(serverDir string) error {
+func SetupInitialProperties(reader *bufio.Reader, serverDir string) error {
 	propertiesPath := filepath.Join(serverDir, "server.properties")
 
 	if _, err := os.Stat(propertiesPath); err == nil {
@@ -19,7 +19,6 @@ func SetupInitialProperties(serverDir string) error {
 	}
 
 	logx.Info("\nConfiguración Inicial del Mundo (server.properties)")
-	reader := bufio.NewReader(os.Stdin)
 
 	motd := promptString(reader, "[?] Nombre/Mensaje del servidor (MOTD)", "Un servidor de Minecraft")
 	difficulty := promptOptions(reader, "[?] Dificultad (peaceful, easy, normal, hard)", []string{"peaceful", "easy", "normal", "hard"}, "normal")
