@@ -7,10 +7,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"syscall"
+	"strconv"
+	"strings"
 )
-
-const createNewConsole = 0x00000010
 
 type TunnelManager struct {
 	pid int
@@ -32,14 +31,20 @@ func (tm *TunnelManager) Start(cfg *config.Config) error {
 
 	logx.Info("Lanzando Playit...")
 
-	cmd := exec.Command(absolutePlayitPath)
-	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: createNewConsole}
+	cmd := exec.Command("powershell", "-NoProfile", "-Command",
+		"(Start-Process -FilePath $env:MCM_PLAYIT_PATH -PassThru).Id")
+	cmd.Env = append(os.Environ(), "MCM_PLAYIT_PATH="+absolutePlayitPath)
 
-	if err := cmd.Start(); err != nil {
+	output, err := cmd.Output()
+	if err != nil {
 		return fmt.Errorf("error al lanzar ventana de playit: %w", err)
 	}
 
-	tm.pid = cmd.Process.Pid
+	pid, err := strconv.Atoi(strings.TrimSpace(string(output)))
+	if err != nil {
+		return fmt.Errorf("no se pudo obtener el PID de playit: %w", err)
+	}
+	tm.pid = pid
 
 	return nil
 }
