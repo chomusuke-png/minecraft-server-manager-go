@@ -12,7 +12,6 @@ type InstanceMeta struct {
 	MCVersion     string `json:"mc_version"`
 	LoaderVersion string `json:"loader_version,omitempty"` // build de Paper, versión de loader de Fabric; vacío en Vanilla
 	RAMGB         int    `json:"ram_gb,omitempty"`         // 0 = usar el valor global de config.json
-	Port          int    `json:"port,omitempty"`
 }
 
 func SaveMeta(instanceDir string, meta InstanceMeta) error {

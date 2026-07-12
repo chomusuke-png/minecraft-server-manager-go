@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"minecraft-manager/internal/logx"
 	"minecraft-manager/internal/prompt"
+	"minecraft-manager/internal/properties"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -40,7 +41,7 @@ type nameChoice struct {
 	path string
 }
 
-func CreateInstance(reader *bufio.Reader, defaultRAMGB int) (string, int, int, error) {
+func CreateInstance(reader *bufio.Reader, defaultRAMGB int) (string, int, error) {
 	choice, ok := prompt.Loop(reader, "\n[?] Nombre para la nueva instancia (sin espacios): ", func(input string) (nameChoice, bool, string) {
 		if input == "" {
 			return nameChoice{}, false, "El nombre no puede estar vacío. Entrada incorrecta, reintente."
@@ -58,19 +59,18 @@ func CreateInstance(reader *bufio.Reader, defaultRAMGB int) (string, int, int, e
 		return nameChoice{name: input, path: path}, true, ""
 	})
 	if !ok {
-		return "", 0, 0, fmt.Errorf("no se pudo leer la entrada")
+		return "", 0, fmt.Errorf("no se pudo leer la entrada")
 	}
 	name, instancePath := choice.name, choice.path
 
 	ramGB := promptRAM(reader, defaultRAMGB)
-	port := promptPort(reader, 25565)
 
 	if err := os.MkdirAll(instancePath, 0755); err != nil {
-		return "", 0, 0, fmt.Errorf("error creando directorio: %w", err)
+		return "", 0, fmt.Errorf("error creando directorio: %w", err)
 	}
 
 	logx.Success("Instancia '%s' creada en '%s' con %dGB de RAM.", name, instancePath, ramGB)
-	return instancePath, ramGB, port, nil
+	return instancePath, ramGB, nil
 }
 
 func promptRAM(reader *bufio.Reader, defaultValue int) int {
@@ -79,17 +79,6 @@ func promptRAM(reader *bufio.Reader, defaultValue int) int {
 		value, err := strconv.Atoi(input)
 		if err != nil || value <= 0 {
 			return 0, false, "Error: ingresá un número entero válido mayor a 0."
-		}
-		return value, true, ""
-	})
-}
-
-func promptPort(reader *bufio.Reader, defaultValue int) int {
-	promptText := fmt.Sprintf("[?] Puerto del servidor (Enter para usar %d): ", defaultValue)
-	return prompt.LoopDefault(reader, promptText, defaultValue, func(input string) (int, bool, string) {
-		value, err := strconv.Atoi(input)
-		if err != nil || value <= 0 || value > 65535 {
-			return 0, false, "Error: ingresá un puerto válido (1-65535)."
 		}
 		return value, true, ""
 	})
@@ -105,8 +94,8 @@ func PrintInstanceInfo(instanceDir string) {
 	if meta.RAMGB > 0 {
 		info += fmt.Sprintf(" | %dGB RAM", meta.RAMGB)
 	}
-	if meta.Port > 0 {
-		info += fmt.Sprintf(" | puerto %d", meta.Port)
+	if port, ok := properties.ReadPort(instanceDir); ok {
+		info += fmt.Sprintf(" | puerto %d", port)
 	}
 	fmt.Printf("    [%s]", info)
 }
@@ -126,18 +115,3 @@ func PromptRAMUpdate(reader *bufio.Reader, current int) int {
 	})
 }
 
-func PromptPortUpdate(reader *bufio.Reader, current int) int {
-	defaultPort := current
-	if defaultPort == 0 {
-		defaultPort = 25565
-	}
-
-	promptText := fmt.Sprintf("[?] Puerto del servidor (Enter para mantener %d): ", defaultPort)
-	return prompt.LoopDefault(reader, promptText, defaultPort, func(input string) (int, bool, string) {
-		value, err := strconv.Atoi(input)
-		if err != nil || value <= 0 || value > 65535 {
-			return 0, false, "Puerto inválido, ingresá un valor entre 1 y 65535."
-		}
-		return value, true, ""
-	})
-}
