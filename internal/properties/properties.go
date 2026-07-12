@@ -23,7 +23,7 @@ func SetupInitialProperties(reader *bufio.Reader, serverDir string) error {
 	motd := promptString(reader, "[?] Nombre/Mensaje del servidor (MOTD)", "Un servidor de Minecraft")
 	difficulty := promptOptions(reader, "[?] Dificultad (peaceful, easy, normal, hard)", []string{"peaceful", "easy", "normal", "hard"}, "normal")
 	maxPlayers := promptInt(reader, "[?] Jugadores máximos", 20)
-	onlineMode := promptBoolean(reader, "[?] ¿Habilitar online-mode (requiere cuenta premium)? (true/false)", false)
+	onlineMode := promptBoolean(reader, "[?] ¿Habilitar online-mode (requiere cuenta premium)? (true/false)", true)
 	port := promptPort(reader, "[?] Puerto del servidor", 25565)
 
 	fileContent := fmt.Sprintf("motd=%s\n"+
