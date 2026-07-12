@@ -13,11 +13,10 @@ import (
 	"minecraft-manager/internal/config"
 	"minecraft-manager/internal/instance"
 	"minecraft-manager/internal/logx"
+	"minecraft-manager/internal/prompt"
 	"minecraft-manager/internal/updater"
 )
 
-// Actualizar el loader de una instancia no debe cerrar el programa, así
-// que vuelve a mostrar el menú en vez de retornar.
 func runMenuLoop(reader *bufio.Reader, cfg *config.Config) string {
 	for {
 		selectedInstanceDir, action := selectInstanceFlow(reader, cfg)
@@ -64,47 +63,49 @@ func selectInstanceFlow(reader *bufio.Reader, cfg *config.Config) (string, strin
 	fmt.Println("U) actualizar loader de una instancia")
 	fmt.Println("Q) salir")
 
-	for {
-		fmt.Print("\n[?] Opción: ")
-		choice, err := reader.ReadString('\n')
-		choice = strings.ToUpper(strings.TrimSpace(choice))
-
-		if err != nil {
-			return "", ""
-		}
+	result, ok := prompt.Loop(reader, "\n[?] Opción: ", func(input string) (menuChoice, bool, string) {
+		choice := strings.ToUpper(input)
 
 		switch choice {
 		case "Q":
-			return "", ""
+			return menuChoice{}, true, ""
 
 		case "C":
 			path, ramGB, port, err := instance.CreateInstance(reader, cfg.RAMGB)
 			if err != nil {
 				logx.Error("Error creando instancia: %v", err)
-				return "", ""
+				return menuChoice{}, true, ""
 			}
 			pendingMeta := instance.InstanceMeta{RAMGB: ramGB, Port: port}
 			if err := instance.SaveMeta(path, pendingMeta); err != nil {
 				logx.Warn("Advertencia: no se pudo guardar instance.json parcial: %v", err)
 			}
-			return path, ""
+			return menuChoice{path: path}, true, ""
 
 		case "U":
 			if len(instances) == 0 {
-				logx.Error("No hay instancias disponibles para actualizar.")
-				continue
+				return menuChoice{}, false, "No hay instancias disponibles para actualizar."
 			}
-			return selectExistingInstance(reader, instances), "update"
+			return menuChoice{path: selectExistingInstance(reader, instances), action: "update"}, true, ""
 
 		default:
 			idx, err := strconv.Atoi(choice)
 			if err != nil || idx < 1 || idx > len(instances) {
-				logx.Error("Entrada incorrecta, reintente.")
-				continue
+				return menuChoice{}, false, "Entrada incorrecta, reintente."
 			}
-			return filepath.Join(instance.InstancesRootDir, instances[idx-1]), ""
+			return menuChoice{path: filepath.Join(instance.InstancesRootDir, instances[idx-1])}, true, ""
 		}
+	})
+
+	if !ok {
+		return "", ""
 	}
+	return result.path, result.action
+}
+
+type menuChoice struct {
+	path   string
+	action string
 }
 
 func clearScreen() {
@@ -127,21 +128,15 @@ func selectExistingInstance(reader *bufio.Reader, instances []string) string {
 		fmt.Println()
 	}
 
-	for {
-		fmt.Print("[?] Opción: ")
-		choice, readErr := reader.ReadString('\n')
-		choice = strings.TrimSpace(choice)
-
-		if readErr != nil {
-			return ""
-		}
-
-		idx, err := strconv.Atoi(choice)
+	path, ok := prompt.Loop(reader, "[?] Opción: ", func(input string) (string, bool, string) {
+		idx, err := strconv.Atoi(input)
 		if err != nil || idx < 1 || idx > len(instances) {
-			logx.Error("Entrada incorrecta, reintente.")
-			continue
+			return "", false, "Entrada incorrecta, reintente."
 		}
-
-		return filepath.Join(instance.InstancesRootDir, instances[idx-1])
+		return filepath.Join(instance.InstancesRootDir, instances[idx-1]), true, ""
+	})
+	if !ok {
+		return ""
 	}
+	return path
 }

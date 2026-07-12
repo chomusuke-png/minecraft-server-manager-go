@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"minecraft-manager/internal/logx"
+	"minecraft-manager/internal/prompt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -197,20 +198,15 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 	fmt.Println("   AUTOMATIC INSTALLATION SELECTOR")
 	fmt.Println(strings.Repeat("=", 40))
 
-	var version string
-	for {
-		fmt.Print("[?] Enter Minecraft version (e.g., 1.20.1): ")
-		v, err := reader.ReadString('\n')
-		version = strings.TrimSpace(v)
-
-		if err != nil {
-			logx.Error("\nNo se pudo leer la entrada. Cancelado.")
-			return nil
+	version, ok := prompt.Loop(reader, "[?] Enter Minecraft version (e.g., 1.20.1): ", func(input string) (string, bool, string) {
+		if input == "" {
+			return "", false, "Entrada incorrecta, reintente."
 		}
-		if version != "" {
-			break
-		}
-		logx.Error("Entrada incorrecta, reintente.")
+		return input, true, ""
+	})
+	if !ok {
+		logx.Error("\nNo se pudo leer la entrada. Cancelado.")
+		return nil
 	}
 
 	fmt.Printf("\nSelect server type for %s:\n", version)
@@ -219,20 +215,15 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 	fmt.Println("3) Vanilla")
 	fmt.Println("4) Cancel")
 
-	var choice string
-	for {
-		fmt.Print("\n[?] Option [1-4]: ")
-		c, readErr := reader.ReadString('\n')
-		choice = strings.TrimSpace(c)
-
-		if readErr != nil {
-			logx.Error("\nNo se pudo leer la entrada. Cancelado.")
-			return nil
+	choice, ok := prompt.Loop(reader, "\n[?] Option [1-4]: ", func(input string) (string, bool, string) {
+		if input == "1" || input == "2" || input == "3" || input == "4" {
+			return input, true, ""
 		}
-		if choice == "1" || choice == "2" || choice == "3" || choice == "4" {
-			break
-		}
-		logx.Error("Entrada incorrecta, reintente.")
+		return "", false, "Entrada incorrecta, reintente."
+	})
+	if !ok {
+		logx.Error("\nNo se pudo leer la entrada. Cancelado.")
+		return nil
 	}
 
 	var err error

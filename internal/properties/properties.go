@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"minecraft-manager/internal/logx"
+	"minecraft-manager/internal/prompt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -41,51 +42,34 @@ func SetupInitialProperties(serverDir string) error {
 }
 
 func promptString(reader *bufio.Reader, message, defaultValue string) string {
-	fmt.Printf("%s [%s]: ", message, defaultValue)
-	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(input)
-
-	if input == "" {
-		return defaultValue
-	}
-	return input
+	promptText := fmt.Sprintf("%s [%s]: ", message, defaultValue)
+	return prompt.LoopDefault(reader, promptText, defaultValue, func(input string) (string, bool, string) {
+		return input, true, ""
+	})
 }
 
 func promptOptions(reader *bufio.Reader, message string, validOptions []string, defaultValue string) string {
-	for {
-		fmt.Printf("%s [%s]: ", message, defaultValue)
-		input, _ := reader.ReadString('\n')
-		input = strings.ToLower(strings.TrimSpace(input))
-
-		if input == "" {
-			return defaultValue
-		}
-
+	promptText := fmt.Sprintf("%s [%s]: ", message, defaultValue)
+	return prompt.LoopDefault(reader, promptText, defaultValue, func(input string) (string, bool, string) {
+		input = strings.ToLower(input)
 		for _, option := range validOptions {
 			if input == option {
-				return input
+				return input, true, ""
 			}
 		}
-		logx.Error("Opción inválida. Valores permitidos: %v", validOptions)
-	}
+		return "", false, fmt.Sprintf("Opción inválida. Valores permitidos: %v", validOptions)
+	})
 }
 
 func promptInt(reader *bufio.Reader, message string, defaultValue int) int {
-	for {
-		fmt.Printf("%s [%d]: ", message, defaultValue)
-		input, _ := reader.ReadString('\n')
-		input = strings.TrimSpace(input)
-
-		if input == "" {
-			return defaultValue
-		}
-
+	promptText := fmt.Sprintf("%s [%d]: ", message, defaultValue)
+	return prompt.LoopDefault(reader, promptText, defaultValue, func(input string) (int, bool, string) {
 		parsedValue, err := strconv.Atoi(input)
-		if err == nil && parsedValue > 0 {
-			return parsedValue
+		if err != nil || parsedValue <= 0 {
+			return 0, false, "Error: Por favor, ingresa un número entero válido mayor a 0."
 		}
-		logx.Error("Error: Por favor, ingresa un número entero válido mayor a 0.")
-	}
+		return parsedValue, true, ""
+	})
 }
 
 func promptBoolean(reader *bufio.Reader, message string, defaultValue bool) bool {
@@ -93,24 +77,15 @@ func promptBoolean(reader *bufio.Reader, message string, defaultValue bool) bool
 	if defaultValue {
 		defaultStr = "true"
 	}
+	promptText := fmt.Sprintf("%s [%s]: ", message, defaultStr)
 
-	for {
-		fmt.Printf("%s [%s]: ", message, defaultStr)
-		input, _ := reader.ReadString('\n')
-		input = strings.ToLower(strings.TrimSpace(input))
-
-		if input == "" {
-			return defaultValue
+	return prompt.LoopDefault(reader, promptText, defaultValue, func(input string) (bool, bool, string) {
+		switch strings.ToLower(input) {
+		case "true", "t", "y", "yes", "si":
+			return true, true, ""
+		case "false", "f", "n", "no":
+			return false, true, ""
 		}
-
-		if input == "true" || input == "t" || input == "y" || input == "yes" || input == "si" {
-			return true
-		}
-
-		if input == "false" || input == "f" || input == "n" || input == "no" {
-			return false
-		}
-
-		logx.Error("Error: Responde 'true' o 'false'.")
-	}
+		return false, false, "Error: Responde 'true' o 'false'."
+	})
 }

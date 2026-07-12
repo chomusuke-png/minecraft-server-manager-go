@@ -6,7 +6,7 @@ import (
 	"minecraft-manager/internal/downloader"
 	"minecraft-manager/internal/instance"
 	"minecraft-manager/internal/logx"
-	"strings"
+	"minecraft-manager/internal/prompt"
 )
 
 func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
@@ -33,14 +33,10 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader) error {
 	}
 	logx.Info("\nInstancia actual: %s %s | RAM: %s", meta.LoaderType, meta.MCVersion, ramDisplay)
 
-	fmt.Printf("[?] Nueva versión de Minecraft (Enter para mantener '%s'): ", meta.MCVersion)
-	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(input)
-
-	newVersion := meta.MCVersion
-	if input != "" {
-		newVersion = input
-	}
+	promptText := fmt.Sprintf("[?] Nueva versión de Minecraft (Enter para mantener '%s'): ", meta.MCVersion)
+	newVersion := prompt.LoopDefault(reader, promptText, meta.MCVersion, func(input string) (string, bool, string) {
+		return input, true, ""
+	})
 
 	newLoaderType := promptLoaderType(reader, meta.LoaderType)
 
@@ -83,23 +79,15 @@ func promptLoaderType(reader *bufio.Reader, current string) string {
 	fmt.Println("  2) Fabric")
 	fmt.Println("  3) Vanilla")
 
-	for {
-		fmt.Print("\n[?] Opción (Enter para mantener actual): ")
-
-		input, _ := reader.ReadString('\n')
-		input = strings.TrimSpace(input)
-
+	return prompt.LoopDefault(reader, "\n[?] Opción (Enter para mantener actual): ", current, func(input string) (string, bool, string) {
 		switch input {
-		case "":
-			return current
 		case "1":
-			return "paper"
+			return "paper", true, ""
 		case "2":
-			return "fabric"
+			return "fabric", true, ""
 		case "3":
-			return "vanilla"
+			return "vanilla", true, ""
 		}
-
-		logx.Error("Entrada incorrecta, reintente.")
-	}
+		return "", false, "Entrada incorrecta, reintente."
+	})
 }

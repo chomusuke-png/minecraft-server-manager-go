@@ -11,6 +11,7 @@ import (
 	"minecraft-manager/internal/downloader"
 	"minecraft-manager/internal/instance"
 	"minecraft-manager/internal/logx"
+	"minecraft-manager/internal/prompt"
 )
 
 func ensureServerJar(reader *bufio.Reader, dir string, cfg *config.Config, dl *downloader.Downloader) bool {
@@ -88,23 +89,19 @@ func fileExists(path string) bool {
 }
 
 func askYesNo(reader *bufio.Reader, question string) bool {
-	for {
-		fmt.Printf("%s (y/n): ", question)
-		response, err := reader.ReadString('\n')
-		response = strings.ToLower(strings.TrimSpace(response))
-
-		switch response {
+	promptText := fmt.Sprintf("%s (y/n): ", question)
+	value, ok := prompt.Loop(reader, promptText, func(input string) (bool, bool, string) {
+		switch strings.ToLower(input) {
 		case "y", "s", "si", "yes":
-			return true
+			return true, true, ""
 		case "n", "no":
-			return false
+			return false, true, ""
 		}
-
-		if err != nil {
-			logx.Error("\nNo se pudo leer la respuesta, se asume 'no'.")
-			return false
-		}
-
-		logx.Error("Entrada incorrecta, reintente.")
+		return false, false, "Entrada incorrecta, reintente."
+	})
+	if !ok {
+		logx.Error("\nNo se pudo leer la respuesta, se asume 'no'.")
+		return false
 	}
+	return value
 }
