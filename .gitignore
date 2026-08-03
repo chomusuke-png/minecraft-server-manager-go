@@ -1,1 +1,8 @@
 builds
+config.json
+
+# JDKs descargados por el resolver de Java (~200-330MB cada uno).
+runtimes/
+
+# Instancias de servidor: mundos, logs, libraries/ y el jar del loader.
+instances/

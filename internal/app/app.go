@@ -26,7 +26,7 @@ func Run(cfg *config.Config) {
 
 	logx.Info("\nTrabajando sobre instancia: %s", selectedInstanceDir)
 
-	dl := downloader.New(selectedInstanceDir)
+	dl := downloader.New(selectedInstanceDir, cfg.JavaPath)
 
 	if !ensureServerJar(reader, selectedInstanceDir, cfg, dl) {
 		logx.Error("No se puede iniciar sin un archivo de servidor.")

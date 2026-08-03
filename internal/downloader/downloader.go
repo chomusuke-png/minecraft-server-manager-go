@@ -2,32 +2,38 @@ package downloader
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
-	"io"
+	"minecraft-manager/internal/httpx"
+	"minecraft-manager/internal/java"
 	"minecraft-manager/internal/logx"
 	"minecraft-manager/internal/prompt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type Downloader struct {
 	serverDir string
+	javaPath  string
 }
 
 type DownloadResult struct {
 	LoaderType    string
 	MCVersion     string
 	LoaderVersion string
+	// LaunchArgs queda vacío salvo para loaders que no producen un jar ejecutable
+	// (Forge >= 1.17), donde reemplaza al '-jar server.jar' del flujo normal.
+	LaunchArgs []string
+	// JavaPath es el runtime que se validó contra la versión de Minecraft, que no
+	// necesariamente es el java_path global de config.json.
+	JavaPath string
 }
 
-func New(serverDir string) *Downloader {
+func New(serverDir string, javaPath string) *Downloader {
 	return &Downloader{
 		serverDir: serverDir,
+		javaPath:  javaPath,
 	}
 }
 
@@ -36,40 +42,7 @@ func (d *Downloader) DownloadFile(url string, filename string) error {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	return downloadTo(url, filepath.Join(d.serverDir, filename))
-}
-
-func downloadTo(url string, destinationPath string) error {
-	logx.Info("Downloading from: %s", url)
-
-	response, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("server returned non-200 status: %s", response.Status)
-	}
-
-	outputFile, err := os.Create(destinationPath)
-	if err != nil {
-		return err
-	}
-	defer outputFile.Close()
-
-	size := response.ContentLength
-	progressReader := &ProgressReader{
-		Reader: response.Body,
-		Total:  size,
-	}
-
-	if _, err = io.Copy(outputFile, progressReader); err != nil {
-		return err
-	}
-
-	logx.Info("\nDownload completed.")
-	return nil
+	return httpx.Download(url, filepath.Join(d.serverDir, filename))
 }
 
 func (d *Downloader) DownloadPaper(version string) (string, error) {
@@ -144,6 +117,50 @@ func (d *Downloader) DownloadFabric(version string) (string, error) {
 	return loaderVersion, nil
 }
 
+// DownloadForge descarga el instalador, lo ejecuta con --installServer y devuelve
+// la versión del loader junto a los argumentos de arranque resultantes. Ver
+// resolveForgeLaunch para por qué los args pueden venir vacíos.
+func (d *Downloader) DownloadForge(version string) (string, []string, error) {
+	logx.Info("Fetching Forge installer for %s...", version)
+
+	var promos ForgePromotions
+	if err := getJSON("https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json", &promos); err != nil {
+		return "", nil, fmt.Errorf("error fetching Forge promotions: %w", err)
+	}
+
+	// Intenta obtener la versión recomendada y luego la más reciente.
+	forgeVersion := promos.Promos[version+"-recommended"]
+	if forgeVersion == "" {
+		forgeVersion = promos.Promos[version+"-latest"]
+	}
+
+	if forgeVersion == "" {
+		return "", nil, fmt.Errorf("no Forge version found for Minecraft %s", version)
+	}
+
+	logx.Detail("Forge Version: %s", forgeVersion)
+
+	fullVersion := fmt.Sprintf("%s-%s", version, forgeVersion)
+
+	downloadURL := fmt.Sprintf(
+		"https://maven.minecraftforge.net/net/minecraftforge/forge/%[1]s/forge-%[1]s-installer.jar",
+		fullVersion,
+	)
+
+	if err := d.DownloadFile(downloadURL, forgeInstallerName); err != nil {
+		return "", nil, err
+	}
+
+	launchArgs, err := d.installForge(fullVersion)
+	if err != nil {
+		// El instalador quedó a medias: no dejarlo tirado en la instancia.
+		d.removeForgeInstaller()
+		return "", nil, err
+	}
+
+	return forgeVersion, launchArgs, nil
+}
+
 func (d *Downloader) DownloadVanilla(version string) (string, error) {
 	versionManifestURL := "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 
@@ -190,7 +207,7 @@ func (d *Downloader) DownloadPlayit(playitPath string) error {
 		}
 	}
 
-	return downloadTo(url, playitPath)
+	return httpx.Download(url, playitPath)
 }
 
 func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
@@ -212,11 +229,13 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 	fmt.Printf("\nSelect server type for %s:\n", version)
 	fmt.Println("1) Paper")
 	fmt.Println("2) Fabric")
-	fmt.Println("3) Vanilla")
-	fmt.Println("4) Cancel")
+	fmt.Println("3) Forge")
+	fmt.Println("4) Vanilla")
+	fmt.Println("5) Cancel")
 
-	choice, ok := prompt.Loop(reader, "\n[?] Option [1-4]: ", func(input string) (string, bool, string) {
-		if input == "1" || input == "2" || input == "3" || input == "4" {
+	choice, ok := prompt.Loop(reader, "\n[?] Option [1-5]: ", func(input string) (string, bool, string) {
+		switch input {
+		case "1", "2", "3", "4", "5":
 			return input, true, ""
 		}
 		return "", false, "Entrada incorrecta, reintente."
@@ -226,23 +245,34 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 		return nil
 	}
 
-	var err error
-	var loaderType string
-	var loaderVersion string
-
-	switch choice {
-	case "1":
-		loaderType = "paper"
-		loaderVersion, err = d.DownloadPaper(version)
-	case "2":
-		loaderType = "fabric"
-		loaderVersion, err = d.DownloadFabric(version)
-	case "3":
-		loaderType = "vanilla"
-		loaderVersion, err = d.DownloadVanilla(version)
-	case "4":
+	loaderTypes := map[string]string{"1": "paper", "2": "fabric", "3": "forge", "4": "vanilla"}
+	loaderType, isLoader := loaderTypes[choice]
+	if !isLoader {
 		logx.Info("Cancelled.")
 		return nil
+	}
+
+	// Se resuelve antes de descargar porque el instalador de Forge corre con este
+	// mismo Java, y porque no tiene sentido bajar 300MB de servidor para descubrir
+	// después que no hay runtime capaz de levantarlo.
+	if err := d.resolveJava(reader, loaderType, version); err != nil {
+		logx.Error("\n%v", err)
+		return nil
+	}
+
+	var err error
+	var loaderVersion string
+	var launchArgs []string
+
+	switch loaderType {
+	case "paper":
+		loaderVersion, err = d.DownloadPaper(version)
+	case "fabric":
+		loaderVersion, err = d.DownloadFabric(version)
+	case "forge":
+		loaderVersion, launchArgs, err = d.DownloadForge(version)
+	case "vanilla":
+		loaderVersion, err = d.DownloadVanilla(version)
 	}
 
 	if err != nil {
@@ -250,39 +280,32 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 		return nil
 	}
 
-	logx.Success("Success! 'server.jar' installed for version %s.", version)
-	return &DownloadResult{LoaderType: loaderType, MCVersion: version, LoaderVersion: loaderVersion}
+	if len(launchArgs) > 0 {
+		logx.Success("Success! %s %s installed (arranca vía args file, sin server.jar).", loaderType, version)
+	} else {
+		logx.Success("Success! 'server.jar' installed for version %s.", version)
+	}
+
+	return &DownloadResult{
+		LoaderType:    loaderType,
+		MCVersion:     version,
+		LoaderVersion: loaderVersion,
+		LaunchArgs:    launchArgs,
+		JavaPath:      d.javaPath,
+	}
 }
 
-func getJSON(url string, target interface{}) error {
-	httpClient := &http.Client{Timeout: 10 * time.Second}
-	response, err := httpClient.Get(url)
+// resolveJava fija el runtime que usará esta instancia, descargándolo si hace
+// falta. Muta d.javaPath para que el instalador de Forge lo herede.
+func (d *Downloader) resolveJava(reader *bufio.Reader, loaderType string, mcVersion string) error {
+	resolved, err := java.Resolve(reader, java.Require(mcVersion), d.javaPath)
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("API request failed with status: %d", response.StatusCode)
-	}
-
-	return json.NewDecoder(response.Body).Decode(target)
+	d.javaPath = resolved
+	return nil
 }
 
-type ProgressReader struct {
-	Reader io.Reader
-	Total  int64
-	read   int64
-}
-
-func (pr *ProgressReader) Read(p []byte) (int, error) {
-	n, err := pr.Reader.Read(p)
-	pr.read += int64(n)
-
-	if pr.Total > 0 {
-		percent := float64(pr.read) / float64(pr.Total) * 100
-		fmt.Printf("\r[*] Progress: %.1f%%", percent)
-	}
-
-	return n, err
+func getJSON(url string, target interface{}) error {
+	return httpx.GetJSON(url, target)
 }
