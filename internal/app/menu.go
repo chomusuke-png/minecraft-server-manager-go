@@ -25,7 +25,7 @@ func runMenuLoop(reader *bufio.Reader, cfg *config.Config) string {
 		}
 
 		if action == "update" {
-			if err := updater.UpdateLoader(selectedInstanceDir, reader); err != nil {
+			if err := updater.UpdateLoader(selectedInstanceDir, reader, cfg.JavaPath); err != nil {
 				logx.Error("Error actualizando loader: %v", err)
 			}
 			continue

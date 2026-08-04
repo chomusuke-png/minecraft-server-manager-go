@@ -31,3 +31,8 @@ type FabricInstaller struct {
 	Stable  bool   `json:"stable"`
 	Url     string `json:"url"`
 }
+
+type ForgePromotions struct {
+	Homepage string            `json:"homepage"`
+	Promos   map[string]string `json:"promos"`
+}
