@@ -12,13 +12,26 @@ type MojangVersion struct {
 type MojangVersionDetails struct {
 	Downloads struct {
 		Server struct {
-			URL string `json:"url"`
+			URL  string `json:"url"`
+			SHA1 string `json:"sha1"`
 		} `json:"server"`
 	} `json:"downloads"`
 }
 
 type PaperBuildsResponse struct {
 	Builds []int `json:"builds"`
+}
+
+// PaperBuildDetails es la respuesta de /builds/{build}, que trae el nombre real
+// del jar y su sha256. El endpoint de versión (PaperBuildsResponse) solo da
+// números de build, sin esto.
+type PaperBuildDetails struct {
+	Downloads struct {
+		Application struct {
+			Name   string `json:"name"`
+			SHA256 string `json:"sha256"`
+		} `json:"application"`
+	} `json:"downloads"`
 }
 
 type FabricLoader struct {

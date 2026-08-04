@@ -13,6 +13,16 @@ import (
 	"minecraft-manager/internal/logx"
 )
 
+// adoptiumAsset es la respuesta (parcial) de /v3/assets/latest/{major}/hotspot.
+type adoptiumAsset struct {
+	Binary struct {
+		Package struct {
+			Link     string `json:"link"`
+			Checksum string `json:"checksum"`
+		} `json:"package"`
+	} `json:"binary"`
+}
+
 // Download baja el JDK del major pedido desde Adoptium y lo descomprime en
 // runtimes/jdk-<major>/, devolviendo la ruta al ejecutable de java.
 func Download(major int) (string, error) {
@@ -25,12 +35,24 @@ func Download(major int) (string, error) {
 		return "", err
 	}
 
-	// La API de Adoptium no pide auth y redirige al asset de GitHub; para Windows
-	// el binario viene siempre como .zip.
-	url := fmt.Sprintf(
-		"https://api.adoptium.net/v3/binary/latest/%d/ga/windows/%s/jdk/hotspot/normal/eclipse",
+	// El endpoint /v3/binary/latest/... redirige directo al asset sin dar
+	// checksum. El endpoint /v3/assets/latest/... da el mismo binario más su
+	// sha256, así que se usa este para poder verificar lo que se descarga y
+	// después se descomprime y ejecuta.
+	assetsURL := fmt.Sprintf(
+		"https://api.adoptium.net/v3/assets/latest/%d/hotspot?os=windows&architecture=%s&image_type=jdk&jvm_impl=hotspot",
 		major, arch,
 	)
+
+	var assets []adoptiumAsset
+	if err := httpx.GetJSON(assetsURL, &assets); err != nil {
+		return "", fmt.Errorf("no se pudo consultar Adoptium: %w", err)
+	}
+	if len(assets) == 0 || assets[0].Binary.Package.Link == "" {
+		return "", fmt.Errorf("Adoptium no tiene un JDK %d para windows/%s", major, arch)
+	}
+	url := assets[0].Binary.Package.Link
+	sha256Hex := assets[0].Binary.Package.Checksum
 
 	destination := filepath.Join(RuntimesRootDir, fmt.Sprintf("jdk-%d", major))
 
@@ -48,7 +70,7 @@ func Download(major int) (string, error) {
 
 	archivePath := filepath.Join(destination, "jdk.zip")
 	logx.Info("Descargando Java %d desde Adoptium...", major)
-	if err := httpx.Download(url, archivePath); err != nil {
+	if err := httpx.DownloadVerified(url, archivePath, "sha256", sha256Hex); err != nil {
 		return "", fmt.Errorf("no se pudo descargar Java %d: %w", major, err)
 	}
 	defer os.Remove(archivePath)

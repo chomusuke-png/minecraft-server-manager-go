@@ -38,11 +38,20 @@ func New(serverDir string, javaPath string) *Downloader {
 }
 
 func (d *Downloader) DownloadFile(url string, filename string) error {
+	return d.DownloadFileVerified(url, filename, "", "")
+}
+
+// DownloadFileVerified es DownloadFile pero verificando el contenido contra un
+// checksum conocido (algo: "sha1"/"sha256", expectedHex vacío = sin verificar).
+// Ver httpx.DownloadVerified para el detalle de por qué esto importa: todo lo
+// que pasa por acá se termina ejecutando (jars, instaladores) en la máquina del
+// usuario.
+func (d *Downloader) DownloadFileVerified(url, filename, algo, expectedHex string) error {
 	if err := os.MkdirAll(d.serverDir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	return httpx.Download(url, filepath.Join(d.serverDir, filename))
+	return httpx.DownloadVerified(url, filepath.Join(d.serverDir, filename), algo, expectedHex)
 }
 
 func (d *Downloader) DownloadPaper(version string) (string, error) {
@@ -60,10 +69,22 @@ func (d *Downloader) DownloadPaper(version string) (string, error) {
 	}
 
 	latestBuild := data.Builds[len(data.Builds)-1]
-	jarFileName := fmt.Sprintf("paper-%s-%d.jar", version, latestBuild)
-	jarDownloadURL := fmt.Sprintf("%s/builds/%d/downloads/%s", paperAPIBaseURL, latestBuild, jarFileName)
 
-	if err := d.DownloadFile(jarDownloadURL, "server.jar"); err != nil {
+	// El endpoint de versión solo da el número de build; el nombre real del jar
+	// y su sha256 viven en el endpoint del build puntual.
+	buildDetailsURL := fmt.Sprintf("%s/builds/%d", paperAPIBaseURL, latestBuild)
+	var buildDetails PaperBuildDetails
+	if err := getJSON(buildDetailsURL, &buildDetails); err != nil {
+		return "", fmt.Errorf("error obteniendo detalles del build %d: %w", latestBuild, err)
+	}
+
+	jarFileName := buildDetails.Downloads.Application.Name
+	if jarFileName == "" {
+		jarFileName = fmt.Sprintf("paper-%s-%d.jar", version, latestBuild)
+	}
+	jarDownloadURL := fmt.Sprintf("%s/downloads/%s", buildDetailsURL, jarFileName)
+
+	if err := d.DownloadFileVerified(jarDownloadURL, "server.jar", "sha256", buildDetails.Downloads.Application.SHA256); err != nil {
 		return "", err
 	}
 	return strconv.Itoa(latestBuild), nil
@@ -111,6 +132,11 @@ func (d *Downloader) DownloadFabric(version string) (string, error) {
 		version, loaderVersion, installerVersion,
 	)
 
+	// A diferencia de Paper/Vanilla/Forge, Fabric arma este jar al vuelo por
+	// combinación de versión+loader+installer y no publica un checksum para
+	// esa combinación puntual en ningún endpoint de la API. Sigue siendo HTTPS
+	// directo contra la fuente oficial (sin mirror de por medio), pero sin la
+	// verificación de integridad que sí tienen los demás loaders.
 	if err := d.DownloadFile(jarDownloadURL, "server.jar"); err != nil {
 		return "", err
 	}
@@ -147,7 +173,20 @@ func (d *Downloader) DownloadForge(version string) (string, []string, error) {
 		fullVersion,
 	)
 
-	if err := d.DownloadFile(downloadURL, forgeInstallerName); err != nil {
+	// Maven publica un sidecar '<artefacto>.sha1' junto a cada jar. Es best
+	// effort: si por lo que sea no está (versiones viejas, hiccup del maven),
+	// se sigue sin verificar en vez de bloquear una instalación que hoy
+	// funciona.
+	sha1Hex := ""
+	if sidecar, err := httpx.GetText(downloadURL + ".sha1"); err == nil {
+		if fields := strings.Fields(sidecar); len(fields) > 0 {
+			sha1Hex = fields[0]
+		}
+	} else {
+		logx.Warn("No se pudo obtener el checksum del instalador de Forge, se descarga sin verificar: %v", err)
+	}
+
+	if err := d.DownloadFileVerified(downloadURL, forgeInstallerName, "sha1", sha1Hex); err != nil {
 		return "", nil, err
 	}
 
@@ -191,15 +230,17 @@ func (d *Downloader) DownloadVanilla(version string) (string, error) {
 		return "", fmt.Errorf("no server download available for %s", version)
 	}
 
-	if err := d.DownloadFile(serverJarURL, "server.jar"); err != nil {
+	if err := d.DownloadFileVerified(serverJarURL, "server.jar", "sha1", details.Downloads.Server.SHA1); err != nil {
 		return "", err
 	}
 	return "", nil
 }
 
+const playitAssetName = "playit-windows-x86_64.exe"
+
 func (d *Downloader) DownloadPlayit(playitPath string) error {
 	logx.Info("Downloading Playit.gg Agent...")
-	url := "https://github.com/playit-cloud/playit-agent/releases/latest/download/playit-windows-x86_64.exe"
+	url := "https://github.com/playit-cloud/playit-agent/releases/latest/download/" + playitAssetName
 
 	if dir := filepath.Dir(playitPath); dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {
@@ -207,7 +248,44 @@ func (d *Downloader) DownloadPlayit(playitPath string) error {
 		}
 	}
 
-	return httpx.Download(url, playitPath)
+	// GitHub expone en su API el digest sha256 que calculó al recibir el
+	// asset. Es best effort: si la consulta falla (rate limit sin auth, asset
+	// viejo sin digest) se descarga igual, solo que sin verificar.
+	algo, expectedHex := "", ""
+	if hex, err := fetchPlayitSHA256(); err == nil {
+		algo, expectedHex = "sha256", hex
+	} else {
+		logx.Warn("No se pudo obtener el checksum de Playit, se descarga sin verificar: %v", err)
+	}
+
+	return httpx.DownloadVerified(url, playitPath, algo, expectedHex)
+}
+
+// fetchPlayitSHA256 consulta el último release en la API de GitHub y devuelve
+// el digest sha256 del asset de Windows, tal como lo calculó GitHub al
+// recibir el archivo.
+func fetchPlayitSHA256() (string, error) {
+	var release struct {
+		Assets []struct {
+			Name   string `json:"name"`
+			Digest string `json:"digest"`
+		} `json:"assets"`
+	}
+	if err := getJSON("https://api.github.com/repos/playit-cloud/playit-agent/releases/latest", &release); err != nil {
+		return "", err
+	}
+
+	for _, asset := range release.Assets {
+		if asset.Name != playitAssetName {
+			continue
+		}
+		hex, ok := strings.CutPrefix(asset.Digest, "sha256:")
+		if !ok || hex == "" {
+			return "", fmt.Errorf("release de playit sin digest sha256 para '%s'", playitAssetName)
+		}
+		return hex, nil
+	}
+	return "", fmt.Errorf("asset '%s' no encontrado en el último release de playit", playitAssetName)
 }
 
 func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
