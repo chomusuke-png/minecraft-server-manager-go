@@ -1,5 +1,6 @@
 builds
 config.json
+playit_registry.json*
 
 # JDKs descargados por el resolver de Java (~200-330MB cada uno).
 runtimes/

@@ -35,11 +35,10 @@ func Run(cfg *config.Config) {
 
 	ensurePlayit(reader, cfg, dl)
 
-	tunnel := playit.New()
-	if err := tunnel.Start(cfg); err != nil {
+	if err := playit.Acquire(cfg); err != nil {
 		logx.Error("Error iniciando Playit: %v", err)
 	}
-	defer tunnel.Stop()
+	defer playit.Release()
 
 	if err := properties.SetupInitialProperties(reader, selectedInstanceDir); err != nil {
 		logx.Error("Error configurando propiedades: %v", err)

@@ -1,6 +1,7 @@
 package playit
 
 import (
+	"encoding/json"
 	"fmt"
 	"minecraft-manager/internal/config"
 	"minecraft-manager/internal/logx"
@@ -9,26 +10,72 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
-type TunnelManager struct {
-	pid int
+const (
+	registryPath   = "playit_registry.json"
+	lockPath       = registryPath + ".lock"
+	lockStaleAfter = 5 * time.Second
+	lockTimeout    = 10 * time.Second
+)
+
+type registry struct {
+	PlayitPID int   `json:"playit_pid"`
+	Clients   []int `json:"clients"`
 }
 
-func New() *TunnelManager {
-	return &TunnelManager{}
-}
-
-func (tm *TunnelManager) Start(cfg *config.Config) error {
+func Acquire(cfg *config.Config) error {
 	if _, err := os.Stat(cfg.PlayitPath); os.IsNotExist(err) {
 		return nil
 	}
 
-	absolutePlayitPath, err := filepath.Abs(cfg.PlayitPath)
+	unlock, err := lock()
 	if err != nil {
-		return fmt.Errorf("error obteniendo ruta absoluta: %w", err)
+		return err
+	}
+	defer unlock()
+
+	reg := loadRegistry()
+	pruneDead(&reg)
+
+	if reg.PlayitPID == 0 {
+		absolutePlayitPath, err := filepath.Abs(cfg.PlayitPath)
+		if err != nil {
+			return fmt.Errorf("error obteniendo ruta absoluta: %w", err)
+		}
+
+		pid, err := launch(absolutePlayitPath)
+		if err != nil {
+			return err
+		}
+		reg.PlayitPID = pid
 	}
 
+	reg.Clients = addPID(reg.Clients, os.Getpid())
+	return saveRegistry(reg)
+}
+
+func Release() {
+	unlock, err := lock()
+	if err != nil {
+		return
+	}
+	defer unlock()
+
+	reg := loadRegistry()
+	reg.Clients = removePID(reg.Clients, os.Getpid())
+	pruneDead(&reg)
+
+	if len(reg.Clients) == 0 && reg.PlayitPID != 0 {
+		kill(reg.PlayitPID)
+		reg.PlayitPID = 0
+	}
+
+	_ = saveRegistry(reg)
+}
+
+func launch(absolutePlayitPath string) (int, error) {
 	logx.Info("Lanzando Playit...")
 
 	cmd := exec.Command("powershell", "-NoProfile", "-Command",
@@ -37,29 +84,103 @@ func (tm *TunnelManager) Start(cfg *config.Config) error {
 
 	output, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("error al lanzar ventana de playit: %w", err)
+		return 0, fmt.Errorf("error al lanzar ventana de playit: %w", err)
 	}
 
 	pid, err := strconv.Atoi(strings.TrimSpace(string(output)))
 	if err != nil {
-		return fmt.Errorf("no se pudo obtener el PID de playit: %w", err)
+		return 0, fmt.Errorf("no se pudo obtener el PID de playit: %w", err)
 	}
-	tm.pid = pid
-
-	return nil
+	return pid, nil
 }
 
-func (tm *TunnelManager) Stop() {
-	if tm.pid == 0 {
-		return
-	}
-
+func kill(pid int) {
 	logx.Info("Cerrando ventana de Playit...")
 
-	killCommand := exec.Command("taskkill", "/F", "/PID", fmt.Sprintf("%d", tm.pid), "/T")
-
+	killCommand := exec.Command("taskkill", "/F", "/PID", strconv.Itoa(pid), "/T")
 	killCommand.Stdout = nil
 	killCommand.Stderr = nil
-
 	_ = killCommand.Run()
+}
+
+func isAlive(pid int) bool {
+	output, err := exec.Command("tasklist", "/FI", fmt.Sprintf("PID eq %d", pid), "/NH").Output()
+	if err != nil {
+		return false
+	}
+	return strings.Contains(string(output), strconv.Itoa(pid))
+}
+
+func pruneDead(reg *registry) {
+	alive := reg.Clients[:0]
+	for _, pid := range reg.Clients {
+		if isAlive(pid) {
+			alive = append(alive, pid)
+		}
+	}
+	reg.Clients = alive
+
+	if reg.PlayitPID != 0 && !isAlive(reg.PlayitPID) {
+		reg.PlayitPID = 0
+	}
+}
+
+func addPID(pids []int, pid int) []int {
+	for _, p := range pids {
+		if p == pid {
+			return pids
+		}
+	}
+	return append(pids, pid)
+}
+
+func removePID(pids []int, pid int) []int {
+	result := pids[:0]
+	for _, p := range pids {
+		if p != pid {
+			result = append(result, p)
+		}
+	}
+	return result
+}
+
+func loadRegistry() registry {
+	data, err := os.ReadFile(registryPath)
+	if err != nil {
+		return registry{}
+	}
+	var reg registry
+	if err := json.Unmarshal(data, &reg); err != nil {
+		return registry{}
+	}
+	return reg
+}
+
+func saveRegistry(reg registry) error {
+	data, err := json.MarshalIndent(reg, "", "    ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(registryPath, data, 0644)
+}
+
+func lock() (unlock func(), err error) {
+	deadline := time.Now().Add(lockTimeout)
+	for {
+		f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+		if err == nil {
+			f.Close()
+			return func() { os.Remove(lockPath) }, nil
+		}
+
+		if info, statErr := os.Stat(lockPath); statErr == nil && time.Since(info.ModTime()) > lockStaleAfter {
+			os.Remove(lockPath)
+			continue
+		}
+
+		if time.Now().After(deadline) {
+			return nil, fmt.Errorf("no se pudo obtener el lock de %s", lockPath)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 }
