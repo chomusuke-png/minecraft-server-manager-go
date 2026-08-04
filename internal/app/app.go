@@ -3,11 +3,13 @@ package app
 import (
 	"bufio"
 	"os"
+	"path/filepath"
 
 	"minecraft-manager/internal/backup"
 	"minecraft-manager/internal/config"
 	"minecraft-manager/internal/downloader"
 	"minecraft-manager/internal/eula"
+	"minecraft-manager/internal/instance"
 	"minecraft-manager/internal/logx"
 	"minecraft-manager/internal/mods"
 	"minecraft-manager/internal/playit"
@@ -53,7 +55,12 @@ func Run(cfg *config.Config) {
 	mods.DisableClientMods(selectedInstanceDir)
 
 	logx.Info("\nEjecutando tareas de mantenimiento...")
-	bm := backup.New(selectedInstanceDir, cfg.BackupRetentionDays)
+	instanceName := filepath.Base(selectedInstanceDir)
+	keepMin := cfg.BackupKeepMin
+	if meta, err := instance.LoadMeta(selectedInstanceDir); err == nil && meta.BackupKeepMin > 0 {
+		keepMin = meta.BackupKeepMin
+	}
+	bm := backup.New(selectedInstanceDir, instanceName, cfg.BackupRetentionDays, keepMin)
 	if err := bm.CreateBackup(); err != nil {
 		logx.Error("Alerta de backup: %v", err)
 	}

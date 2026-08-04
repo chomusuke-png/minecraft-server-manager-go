@@ -18,6 +18,8 @@ type InstanceMeta struct {
 	// JavaPath pisa el java_path global. Hace falta porque cada versión de
 	// Minecraft exige un major distinto y no pueden convivir en uno solo.
 	JavaPath string `json:"java_path,omitempty"`
+	// BackupKeepMin pisa el backup_keep_min global. 0 = usar el valor global.
+	BackupKeepMin int `json:"backup_keep_min,omitempty"`
 }
 
 func SaveMeta(instanceDir string, meta InstanceMeta) error {

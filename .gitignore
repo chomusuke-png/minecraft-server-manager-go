@@ -7,3 +7,6 @@ runtimes/
 
 # Instancias de servidor: mundos, logs, libraries/ y el jar del loader.
 instances/
+
+# Backups de mundos generados por internal/backup.
+backups/

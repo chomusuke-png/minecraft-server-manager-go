@@ -115,3 +115,21 @@ func PromptRAMUpdate(reader *bufio.Reader, current int) int {
 	})
 }
 
+// PromptBackupKeepMinUpdate deja pisar el piso mínimo de backups global por
+// instancia. A diferencia de la RAM, acá 0 es un valor válido: significa
+// "usar el global de config.json".
+func PromptBackupKeepMinUpdate(reader *bufio.Reader, current int) int {
+	promptText := fmt.Sprintf("[?] Mínimo de backups a conservar (Enter para mantener %d, 0 = usar el global): ", current)
+	if current == 0 {
+		promptText = "[?] Mínimo de backups a conservar (Enter para usar el valor global de config.json): "
+	}
+
+	return prompt.LoopDefault(reader, promptText, current, func(input string) (int, bool, string) {
+		value, err := strconv.Atoi(input)
+		if err != nil || value < 0 {
+			return 0, false, "Valor inválido, ingresá un número entero mayor o igual a 0."
+		}
+		return value, true, ""
+	})
+}
+

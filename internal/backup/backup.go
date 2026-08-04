@@ -7,42 +7,59 @@ import (
 	"minecraft-manager/internal/logx"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 )
+
+// worldDirs son las carpetas de dimensión estándar que genera un servidor
+// vanilla/Paper/Fabric/Forge con la config por defecto (level-name=world).
+// Solo se incluyen en el backup las que realmente existan.
+var worldDirs = []string{"world", "world_nether", "world_the_end"}
 
 type BackupManager struct {
 	serverDir     string
 	backupDir     string
+	instanceName  string
 	retentionDays int
+	keepMin       int
 }
 
-func New(serverDir string, retentionDays int) *BackupManager {
-	backupDir := "backups"
-	if _, err := os.Stat(backupDir); os.IsNotExist(err) {
-		os.Mkdir(backupDir, 0755)
+// New arma el manager de backups de una instancia. keepMin es el piso de
+// backups que nunca se borra, sin importar cuántos días de retención hayan
+// pasado.
+func New(serverDir, instanceName string, retentionDays, keepMin int) *BackupManager {
+	backupDir := filepath.Join("backups", instanceName)
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		logx.Error("No se pudo crear carpeta de backups '%s': %v", backupDir, err)
 	}
 
 	return &BackupManager{
 		serverDir:     serverDir,
 		backupDir:     backupDir,
+		instanceName:  instanceName,
 		retentionDays: retentionDays,
+		keepMin:       keepMin,
 	}
 }
 
 func (bm *BackupManager) CreateBackup() error {
-	worldPath := filepath.Join(bm.serverDir, "world")
-
-	if _, err := os.Stat(worldPath); os.IsNotExist(err) {
+	var existingDirs []string
+	for _, dir := range worldDirs {
+		if info, err := os.Stat(filepath.Join(bm.serverDir, dir)); err == nil && info.IsDir() {
+			existingDirs = append(existingDirs, dir)
+		}
+	}
+	if len(existingDirs) == 0 {
 		return nil
 	}
 
 	bm.cleanOldBackups()
 
 	timestamp := time.Now().Format("20060102_150405")
-	zipName := fmt.Sprintf("world_backup_%s.zip", timestamp)
+	zipName := timestamp + ".zip"
 	zipPath := filepath.Join(bm.backupDir, zipName)
 
-	logx.Info("Creando backup: %s...", zipName)
+	logx.Info("Creando backup de '%s': %s...", bm.instanceName, zipName)
 
 	file, err := os.Create(zipPath)
 	if err != nil {
@@ -53,73 +70,94 @@ func (bm *BackupManager) CreateBackup() error {
 	zipWriter := zip.NewWriter(file)
 	defer zipWriter.Close()
 
-	err = filepath.Walk(worldPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
+	for _, dir := range existingDirs {
+		worldPath := filepath.Join(bm.serverDir, dir)
+
+		err = filepath.Walk(worldPath, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() {
+				return nil
+			}
+
+			relPath, err := filepath.Rel(bm.serverDir, path)
+			if err != nil {
+				return err
+			}
+
+			zipEntry, err := zipWriter.Create(relPath)
+			if err != nil {
+				return err
+			}
+
+			sourceFile, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer sourceFile.Close()
+
+			_, err = io.Copy(zipEntry, sourceFile)
 			return err
-		}
-		if info.IsDir() {
-			return nil
-		}
+		})
 
-		relPath, err := filepath.Rel(bm.serverDir, path)
 		if err != nil {
-			return err
+			return fmt.Errorf("error comprimiendo '%s': %w", dir, err)
 		}
-
-		zipEntry, err := zipWriter.Create(relPath)
-		if err != nil {
-			return err
-		}
-
-		sourceFile, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer sourceFile.Close()
-
-		_, err = io.Copy(zipEntry, sourceFile)
-		return err
-	})
-
-	if err != nil {
-		return fmt.Errorf("error comprimiendo archivos: %w", err)
 	}
 
 	logx.Success("Backup completado exitosamente.")
 	return nil
 }
 
+// cleanOldBackups borra los backups más viejos que retentionDays, pero nunca
+// deja menos de keepMin backups en total (los más recientes primero).
 func (bm *BackupManager) cleanOldBackups() {
-	files, err := os.ReadDir(bm.backupDir)
+	entries, err := os.ReadDir(bm.backupDir)
 	if err != nil {
 		logx.Error("Error leyendo carpeta backups: %v", err)
 		return
 	}
 
-	retentionDuration := time.Duration(bm.retentionDays) * 24 * time.Hour
-	cutoff := time.Now().Add(-retentionDuration)
+	type backupFile struct {
+		name    string
+		modTime time.Time
+	}
 
-	logx.Info("Verificando backups antiguos...")
-
-	count := 0
-	for _, file := range files {
-		if filepath.Ext(file.Name()) != ".zip" {
+	var zips []backupFile
+	for _, entry := range entries {
+		if filepath.Ext(entry.Name()) != ".zip" {
 			continue
 		}
-
-		info, err := file.Info()
+		info, err := entry.Info()
 		if err != nil {
 			continue
 		}
+		zips = append(zips, backupFile{name: entry.Name(), modTime: info.ModTime()})
+	}
 
-		if info.ModTime().Before(cutoff) {
-			backupFilePath := filepath.Join(bm.backupDir, file.Name())
-			if err := os.Remove(backupFilePath); err == nil {
-				logx.Detail("Eliminado: %s", file.Name())
-				count++
-			} else {
-				logx.Error("Error borrando %s: %v", file.Name(), err)
-			}
+	sort.Slice(zips, func(i, j int) bool { return zips[i].modTime.After(zips[j].modTime) })
+
+	retentionDuration := time.Duration(bm.retentionDays) * 24 * time.Hour
+	cutoff := time.Now().Add(-retentionDuration)
+
+	logx.Info("Verificando backups antiguos de '%s'...", bm.instanceName)
+
+	count := 0
+	for i, zip := range zips {
+		if i < bm.keepMin {
+			continue
+		}
+		if !zip.modTime.Before(cutoff) {
+			continue
+		}
+
+		backupFilePath := filepath.Join(bm.backupDir, zip.name)
+		if err := os.Remove(backupFilePath); err == nil {
+			logx.Detail("Eliminado: %s", zip.name)
+			count++
+		} else {
+			logx.Error("Error borrando %s: %v", zip.name, err)
 		}
 	}
 
