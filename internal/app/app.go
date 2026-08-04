@@ -33,17 +33,17 @@ func Run(cfg *config.Config) {
 		return
 	}
 
+	if err := properties.SetupInitialProperties(reader, selectedInstanceDir); err != nil {
+		logx.Error("Error configurando propiedades: %v", err)
+		return
+	}
+
 	ensurePlayit(reader, cfg, dl)
 
 	if err := playit.Acquire(cfg); err != nil {
 		logx.Error("Error iniciando Playit: %v", err)
 	}
 	defer playit.Release()
-
-	if err := properties.SetupInitialProperties(reader, selectedInstanceDir); err != nil {
-		logx.Error("Error configurando propiedades: %v", err)
-		return
-	}
 
 	if err := eula.EnsureEulaAccepted(reader, selectedInstanceDir); err != nil {
 		logx.Error("Error con el EULA: %v", err)
