@@ -45,7 +45,7 @@ Q) salir
 
 - Un número selecciona esa instancia y la arranca.
 - `C` crea una instancia nueva.
-- `U` te deja elegir una instancia existente y cambiarle la versión de Minecraft, el tipo de loader, la RAM y el puerto sin tener que borrarla y crearla de nuevo.
+- `U` te deja elegir una instancia existente y cambiarle la versión de Minecraft, el tipo de loader, la RAM, el puerto y el mínimo de backups a conservar, sin tener que borrarla y crearla de nuevo.
 - `Q` sale del programa.
 
 ## `config.json`
@@ -59,12 +59,13 @@ Vive al lado del ejecutable y se genera solo la primera vez:
 | `ram_gb` | RAM por defecto para instancias nuevas, en GB. |
 | `playit_path` | Dónde está (o se va a descargar) `playit.exe`. |
 | `backup_retention_days` | Cuántos días se conservan los backups del mundo antes de borrarse automáticamente. |
+| `backup_keep_min` | Piso mínimo de backups que se conservan siempre, sin importar cuántos días de retención hayan pasado (por defecto 3). |
 
-Cada instancia puede pisar su propia RAM, puerto y versión de Java sin tocar este archivo global (se guarda en su `instance.json`).
+Cada instancia puede pisar su propia RAM, puerto, versión de Java y mínimo de backups sin tocar este archivo global (se guarda en su `instance.json`).
 
 ## Qué hace automáticamente
 
-- **Backups**: antes de cada arranque, si la instancia ya tiene un mundo (`world/`), lo comprime a `backups/world_backup_<fecha>.zip`. Los backups más viejos que `backup_retention_days` se borran solos.
+- **Backups**: antes de cada arranque, si la instancia ya tiene mundo, comprime todas las carpetas de dimensión que existan (`world`, `world_nether`, `world_the_end`) en un único zip dentro de `backups/<instancia>/`. Los backups más viejos que `backup_retention_days` se borran solos, pero nunca se baja del piso mínimo `backup_keep_min` (por instancia o global), sin importar la antigüedad.
 - **Mods client-only**: en instancias Fabric, escanea la carpeta `mods/` y deshabilita (`.jar` → `.jar.disabled`) los mods marcados como exclusivos de cliente, para que no rompan el arranque del servidor.
 - **Reinicio automático**: si el servidor se cae de forma abrupta (no por vos), se reinicia solo a los 10 segundos (cancelable con `Ctrl+C`). Si detecta que el problema fue una versión de Java incompatible, te ofrece resolverlo ahí mismo antes de reintentar.
 - **Túnel de Playit.gg**: si tenés `playit.exe` configurado, se comparte un único agente entre todas las instancias que tengas corriendo al mismo tiempo — no se abre uno por cada servidor, y se cierra solo cuando cerrás la última instancia que lo estaba usando.
