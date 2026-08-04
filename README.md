@@ -86,3 +86,7 @@ Cosas planeadas, todavía sin implementar:
 - [ ] Compatibilidad con Linux (hoy depende de `powershell`/`taskkill`/`tasklist`, solo Windows).
 - [ ] Actualizador automático de la herramienta.
 - [ ] Desactivador de mods de cliente para Forge (hoy el escaneo de mods client-only solo cubre instancias Fabric).
+
+## Licencia
+
+MIT — ver [LICENSE](./LICENSE).
