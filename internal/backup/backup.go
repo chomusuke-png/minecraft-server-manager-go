@@ -86,7 +86,10 @@ func (bm *BackupManager) CreateBackup() error {
 				return err
 			}
 
-			zipEntry, err := zipWriter.Create(relPath)
+			// El formato zip siempre usa '/', sin importar el SO. filepath.Rel
+			// devuelve '\' en Windows, y sin este ToSlash el zip queda con
+			// entradas no estándar.
+			zipEntry, err := zipWriter.Create(filepath.ToSlash(relPath))
 			if err != nil {
 				return err
 			}
