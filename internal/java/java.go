@@ -217,10 +217,10 @@ func wantsDedicated(ask AskLine, candidate string, major int) bool {
 // obtain consigue un runtime que cumpla req, automáticamente o a mano.
 func obtain(ask AskLine, req Requirement) (string, error) {
 	fmt.Printf("\n[?] ¿Cómo conseguir %s?\n", req)
-	if runtime.GOOS == "windows" {
+	if AutoDownloadSupported() {
 		fmt.Printf("  1) Descargarlo automáticamente de Adoptium (queda en %s/)\n", RuntimesRootDir)
 	} else {
-		fmt.Println("  1) (no disponible: la descarga automática sólo está implementada para Windows)")
+		fmt.Printf("  1) (no disponible: la descarga automática no está implementada para %s/%s)\n", runtime.GOOS, runtime.GOARCH)
 	}
 	fmt.Println("  2) Indicar la ruta a un Java que ya tengas instalado")
 	fmt.Println("  3) Cancelar")
@@ -231,8 +231,8 @@ func obtain(ask AskLine, req Requirement) (string, error) {
 	}
 
 	if choice == "1" {
-		if runtime.GOOS != "windows" {
-			logx.Error("La descarga automática sólo está implementada para Windows.")
+		if !AutoDownloadSupported() {
+			logx.Error("La descarga automática no está implementada para %s/%s.", runtime.GOOS, runtime.GOARCH)
 			return askManualPath(ask, req)
 		}
 		return Download(req.Min)

@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"os"
+	"runtime"
 )
 
 type Config struct {
@@ -19,10 +20,17 @@ func DefaultConfig() *Config {
 		JavaPath:            "java",
 		JarName:             "server.jar",
 		RAMGB:               4,
-		PlayitPath:          "playit.exe",
+		PlayitPath:          defaultPlayitPath(),
 		BackupRetentionDays: 7,
 		BackupKeepMin:       3,
 	}
+}
+
+func defaultPlayitPath() string {
+	if runtime.GOOS == "windows" {
+		return "playit.exe"
+	}
+	return "playit"
 }
 
 func Load() (*Config, error) {

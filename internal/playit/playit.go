@@ -4,12 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"minecraft-manager/internal/config"
-	"minecraft-manager/internal/logx"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -75,41 +71,9 @@ func Release() {
 	_ = saveRegistry(reg)
 }
 
-func launch(absolutePlayitPath string) (int, error) {
-	logx.Info("Lanzando Playit...")
-
-	cmd := exec.Command("powershell", "-NoProfile", "-Command",
-		"(Start-Process -FilePath $env:MCM_PLAYIT_PATH -PassThru).Id")
-	cmd.Env = append(os.Environ(), "MCM_PLAYIT_PATH="+absolutePlayitPath)
-
-	output, err := cmd.Output()
-	if err != nil {
-		return 0, fmt.Errorf("error al lanzar ventana de playit: %w", err)
-	}
-
-	pid, err := strconv.Atoi(strings.TrimSpace(string(output)))
-	if err != nil {
-		return 0, fmt.Errorf("no se pudo obtener el PID de playit: %w", err)
-	}
-	return pid, nil
-}
-
-func kill(pid int) {
-	logx.Info("Cerrando ventana de Playit...")
-
-	killCommand := exec.Command("taskkill", "/F", "/PID", strconv.Itoa(pid), "/T")
-	killCommand.Stdout = nil
-	killCommand.Stderr = nil
-	_ = killCommand.Run()
-}
-
-func isAlive(pid int) bool {
-	output, err := exec.Command("tasklist", "/FI", fmt.Sprintf("PID eq %d", pid), "/NH").Output()
-	if err != nil {
-		return false
-	}
-	return strings.Contains(string(output), strconv.Itoa(pid))
-}
+// launch, kill e isAlive están en playit_windows.go / playit_unix.go: lanzar
+// y matar un proceso "suelto" (fuera del árbol que exec.Cmd puede esperar)
+// se hace con herramientas completamente distintas en cada SO.
 
 func pruneDead(reg *registry) {
 	alive := reg.Clients[:0]

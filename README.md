@@ -1,8 +1,8 @@
 # Minecraft Server Manager
 
-Herramienta de línea de comandos para Windows que administra servidores de Minecraft: crea instancias, descarga automáticamente el loader que elijas (Paper, Fabric, Forge o Vanilla), resuelve el Java correcto para cada versión, hace backups del mundo, reinicia el servidor si se cae, y puede exponerlo a internet con un túnel de [Playit.gg](https://playit.gg) sin que tengas que abrir puertos en tu router.
+Herramienta de línea de comandos (Windows y Linux) que administra servidores de Minecraft: crea instancias, descarga automáticamente el loader que elijas (Paper, Fabric, Forge o Vanilla), resuelve el Java correcto para cada versión, hace backups del mundo, reinicia el servidor si se cae, y puede exponerlo a internet con un túnel de [Playit.gg](https://playit.gg) sin que tengas que abrir puertos en tu router.
 
-No hace falta tener Go instalado para usarla — descargá el ejecutable ya compilado.
+No hace falta tener Go instalado para usarla en Windows — descargá el ejecutable ya compilado. En Linux, por ahora, se compila desde el código fuente (ver más abajo).
 
 ## Descarga
 
@@ -10,10 +10,10 @@ Andá a la sección [Releases](../../releases) de este repositorio y descargá e
 
 ## Requisitos
 
-- Windows (usa `powershell`/`taskkill`/`tasklist` internamente, así que por ahora es Windows-only).
+- Windows o Linux (amd64/arm64). El resto de la administración del servidor (arrancar, backups, mods, EULA) es igual en los dos; lo único que cambia por SO es cómo se maneja el proceso de Playit por debajo.
 - Conexión a internet la primera vez que crees o actualices una instancia (para descargar el jar del servidor y, si hace falta, un runtime de Java).
-- Java **no es obligatorio tenerlo instalado de antemano**: si no hay uno compatible, el programa te ofrece descargar automáticamente el JDK correcto para esa versión de Minecraft.
-- [playit.exe](https://playit.gg/download) es opcional, solo si querés exponer el server a internet sin abrir puertos en tu router. El programa también te ofrece descargarlo solo.
+- Java **no es obligatorio tenerlo instalado de antemano**: si no hay uno compatible, el programa te ofrece descargar automáticamente el JDK correcto para esa versión de Minecraft (Windows y Linux, amd64/arm64).
+- [Playit](https://playit.gg/download) es opcional, solo si querés exponer el server a internet sin abrir puertos en tu router. El programa también te ofrece descargarlo solo (`playit.exe` en Windows, binario `playit` en Linux). En Linux no abre una ventana propia como en Windows: su salida se ve en la misma consola y además queda guardada en `playit.log`.
 
 ## Primer uso
 
@@ -27,7 +27,7 @@ Andá a la sección [Releases](../../releases) de este repositorio y descargá e
    - Tipo de servidor: **Paper**, **Fabric**, **Forge** o **Vanilla**.
    - Si el Java que tenés no es compatible con esa versión, te ofrece conseguir uno (descarga automática de [Adoptium](https://adoptium.net/) o indicar la ruta a un Java que ya tengas instalado).
 5. Configurás `server.properties` la primera vez: MOTD, dificultad, jugadores máximos, `online-mode` y **puerto**. Todo con Enter para aceptar el valor por defecto que se muestra entre corchetes.
-6. Si tenés `playit.exe` (o aceptaste descargarlo), se lanza en su propia ventana y queda conectado a tu cuenta.
+6. Si tenés Playit (o aceptaste descargarlo), se lanza y queda conectado a tu cuenta. En Windows en su propia ventana; en Linux, en la misma consola (y logueado en `playit.log`).
 7. Aceptás el EULA de Mojang (obligatorio para que el servidor arranque).
 8. El servidor arranca. Podés escribir comandos de consola de Minecraft directamente en esa misma terminal (`stop`, `say hola`, etc.) — se reenvían al proceso del servidor. `Ctrl+C` hace un apagado prolijo (guarda el mundo antes de cerrar).
 
@@ -57,7 +57,7 @@ Vive al lado del ejecutable y se genera solo la primera vez:
 | `java_path` | Java que se usa por defecto si una instancia no tiene uno propio. `"java"` a secas usa el que esté en el `PATH`. |
 | `jar_name` | Nombre del jar del servidor dentro de cada instancia (por defecto `server.jar`). |
 | `ram_gb` | RAM por defecto para instancias nuevas, en GB. |
-| `playit_path` | Dónde está (o se va a descargar) `playit.exe`. |
+| `playit_path` | Dónde está (o se va a descargar) el binario de Playit (`playit.exe` en Windows, `playit` en Linux). |
 | `backup_retention_days` | Cuántos días se conservan los backups del mundo antes de borrarse automáticamente. |
 | `backup_keep_min` | Piso mínimo de backups que se conservan siempre, sin importar cuántos días de retención hayan pasado (por defecto 3). |
 
@@ -68,14 +68,22 @@ Cada instancia puede pisar su propia RAM, puerto, versión de Java y mínimo de 
 - **Backups**: antes de cada arranque, si la instancia ya tiene mundo, comprime todas las carpetas de dimensión que existan (`world`, `world_nether`, `world_the_end`) en un único zip dentro de `backups/<instancia>/`. Los backups más viejos que `backup_retention_days` se borran solos, pero nunca se baja del piso mínimo `backup_keep_min` (por instancia o global), sin importar la antigüedad.
 - **Mods client-only**: en instancias Fabric, escanea la carpeta `mods/` y deshabilita (`.jar` → `.jar.disabled`) los mods marcados como exclusivos de cliente, para que no rompan el arranque del servidor.
 - **Reinicio automático**: si el servidor se cae de forma abrupta (no por vos), se reinicia solo a los 10 segundos (cancelable con `Ctrl+C`). Si detecta que el problema fue una versión de Java incompatible, te ofrece resolverlo ahí mismo antes de reintentar.
-- **Túnel de Playit.gg**: si tenés `playit.exe` configurado, se comparte un único agente entre todas las instancias que tengas corriendo al mismo tiempo — no se abre uno por cada servidor, y se cierra solo cuando cerrás la última instancia que lo estaba usando.
+- **Túnel de Playit**: si tenés el binario configurado, se comparte un único agente entre todas las instancias que tengas corriendo al mismo tiempo — no se abre uno por cada servidor, y se cierra solo cuando cerrás la última instancia que lo estaba usando.
 
 ## Compilar desde el código fuente
 
-Si preferís compilarlo vos en vez de bajar el `.exe` de Releases, necesitás [Go 1.25+](https://go.dev/dl/):
+Necesitás [Go 1.25+](https://go.dev/dl/):
 
 ```bash
+# Windows
 go build -o minecraft-manager.exe ./cmd
+
+# Linux
+go build -o minecraft-manager ./cmd
+
+# Cross-compilar Windows desde Linux (o al revés) sin instalar nada más:
+GOOS=windows GOARCH=amd64 go build -o minecraft-manager.exe ./cmd
+GOOS=linux   GOARCH=amd64 go build -o minecraft-manager     ./cmd
 ```
 
 No tiene dependencias externas — solo librería estándar de Go.
@@ -84,7 +92,7 @@ No tiene dependencias externas — solo librería estándar de Go.
 
 Cosas planeadas, todavía sin implementar:
 
-- [ ] Compatibilidad con Linux (hoy depende de `powershell`/`taskkill`/`tasklist`, solo Windows).
+- [x] Compatibilidad con Linux — recién agregada, probada acá con tests reales de la extracción de JDK (symlinks, permisos, tar-slip) y del manejo de proceso de Playit (lanzar, detectar vivo, matar), pero todavía no en un servidor Linux de punta a punta. Si algo falla, avisá.
 - [ ] Actualizador automático de la herramienta.
 - [ ] Desactivador de mods de cliente para Forge (hoy el escaneo de mods client-only solo cubre instancias Fabric).
 

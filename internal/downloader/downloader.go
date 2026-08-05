@@ -9,6 +9,7 @@ import (
 	"minecraft-manager/internal/prompt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -236,11 +237,34 @@ func (d *Downloader) DownloadVanilla(version string) (string, error) {
 	return "", nil
 }
 
-const playitAssetName = "playit-windows-x86_64.exe"
+// playitAssetName devuelve el nombre del asset de playit-agent para este
+// SO/arquitectura, tal como lo publica su release de GitHub.
+func playitAssetName() (string, error) {
+	switch runtime.GOOS {
+	case "windows":
+		return "playit-windows-x86_64.exe", nil
+	case "linux":
+		switch runtime.GOARCH {
+		case "amd64":
+			return "playit-linux-amd64", nil
+		case "arm64":
+			return "playit-linux-arm64", nil
+		default:
+			return "", fmt.Errorf("playit no publica un binario para linux/%s", runtime.GOARCH)
+		}
+	default:
+		return "", fmt.Errorf("descarga automática de playit no soportada en %s", runtime.GOOS)
+	}
+}
 
 func (d *Downloader) DownloadPlayit(playitPath string) error {
+	assetName, err := playitAssetName()
+	if err != nil {
+		return err
+	}
+
 	logx.Info("Downloading Playit.gg Agent...")
-	url := "https://github.com/playit-cloud/playit-agent/releases/latest/download/" + playitAssetName
+	url := "https://github.com/playit-cloud/playit-agent/releases/latest/download/" + assetName
 
 	if dir := filepath.Dir(playitPath); dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {
@@ -252,19 +276,31 @@ func (d *Downloader) DownloadPlayit(playitPath string) error {
 	// asset. Es best effort: si la consulta falla (rate limit sin auth, asset
 	// viejo sin digest) se descarga igual, solo que sin verificar.
 	algo, expectedHex := "", ""
-	if hex, err := fetchPlayitSHA256(); err == nil {
+	if hex, err := fetchPlayitSHA256(assetName); err == nil {
 		algo, expectedHex = "sha256", hex
 	} else {
 		logx.Warn("No se pudo obtener el checksum de Playit, se descarga sin verificar: %v", err)
 	}
 
-	return httpx.DownloadVerified(url, playitPath, algo, expectedHex)
+	if err := httpx.DownloadVerified(url, playitPath, algo, expectedHex); err != nil {
+		return err
+	}
+
+	// A diferencia del .exe de Windows, el binario de Linux no llega con el
+	// bit de ejecución puesto.
+	if runtime.GOOS != "windows" {
+		if err := os.Chmod(playitPath, 0755); err != nil {
+			return fmt.Errorf("no se pudo marcar '%s' como ejecutable: %w", playitPath, err)
+		}
+	}
+
+	return nil
 }
 
 // fetchPlayitSHA256 consulta el último release en la API de GitHub y devuelve
-// el digest sha256 del asset de Windows, tal como lo calculó GitHub al
-// recibir el archivo.
-func fetchPlayitSHA256() (string, error) {
+// el digest sha256 del asset pedido, tal como lo calculó GitHub al recibir
+// el archivo.
+func fetchPlayitSHA256(assetName string) (string, error) {
 	var release struct {
 		Assets []struct {
 			Name   string `json:"name"`
@@ -276,16 +312,16 @@ func fetchPlayitSHA256() (string, error) {
 	}
 
 	for _, asset := range release.Assets {
-		if asset.Name != playitAssetName {
+		if asset.Name != assetName {
 			continue
 		}
 		hex, ok := strings.CutPrefix(asset.Digest, "sha256:")
 		if !ok || hex == "" {
-			return "", fmt.Errorf("release de playit sin digest sha256 para '%s'", playitAssetName)
+			return "", fmt.Errorf("release de playit sin digest sha256 para '%s'", assetName)
 		}
 		return hex, nil
 	}
-	return "", fmt.Errorf("asset '%s' no encontrado en el último release de playit", playitAssetName)
+	return "", fmt.Errorf("asset '%s' no encontrado en el último release de playit", assetName)
 }
 
 func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {

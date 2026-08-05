@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 
 	"minecraft-manager/internal/java"
 	"minecraft-manager/internal/logx"
@@ -104,8 +105,17 @@ func (d *Downloader) findForgeArgsFile(fullVersion string) string {
 	}
 
 	// Fallback a prueba de versiones: Forge movió el layout en algunos builds, y
-	// el script generado siempre apunta al args file correcto.
-	for _, script := range []string{"run.bat", "run.sh"} {
+	// el script generado siempre apunta al args file correcto. run.bat y run.sh
+	// se generan juntos sin importar el SO del host, así que hay que probar
+	// primero el del SO actual: usar el del otro (rutas con '\' y classpath
+	// separado por ';' en vez de '/' y ':') rompería el arranque aunque el
+	// archivo "exista" en disco.
+	scripts := []string{"run.sh", "run.bat"}
+	if runtime.GOOS == "windows" {
+		scripts = []string{"run.bat", "run.sh"}
+	}
+
+	for _, script := range scripts {
 		content, err := os.ReadFile(filepath.Join(d.serverDir, script))
 		if err != nil {
 			continue
@@ -114,7 +124,16 @@ func (d *Downloader) findForgeArgsFile(fullVersion string) string {
 		if match == nil {
 			continue
 		}
-		found := filepath.ToSlash(filepath.Clean(string(match[1])))
+		// El regex captura la ruta tal como la escribió el script: run.bat usa
+		// '\', run.sh usa '/'. filepath.Clean/ToSlash solo reinterpretan '\'
+		// como separador si el binario corre en Windows, así que se normaliza
+		// a mano antes para que esto funcione en cualquier SO.
+		normalized := strings.ReplaceAll(string(match[1]), `\`, "/")
+		found := filepath.ToSlash(filepath.Clean(normalized))
+		if !strings.HasSuffix(found, argsFileName) {
+			// Este script apunta al args file del otro SO; no sirve acá.
+			continue
+		}
 		if fileExists(filepath.Join(d.serverDir, found)) {
 			logx.Detail("Args file resuelto desde %s.", script)
 			return found
