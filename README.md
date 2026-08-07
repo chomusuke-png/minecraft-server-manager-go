@@ -2,11 +2,11 @@
 
 Herramienta de línea de comandos (Windows y Linux) que administra servidores de Minecraft: crea instancias, descarga automáticamente el loader que elijas (Paper, Fabric, Forge o Vanilla), resuelve el Java correcto para cada versión, hace backups del mundo, reinicia el servidor si se cae, y puede exponerlo a internet con un túnel de [Playit.gg](https://playit.gg) sin que tengas que abrir puertos en tu router.
 
-No hace falta tener Go instalado para usarla en Windows — descargá el ejecutable ya compilado. En Linux, por ahora, se compila desde el código fuente (ver más abajo).
+No hace falta tener Go instalado para usarla — descargá el ejecutable ya compilado para Windows o Linux.
 
 ## Descarga
 
-Andá a la sección [Releases](../../releases) de este repositorio y descargá el `.exe` de la última versión. Poné ese archivo solo, en una carpeta vacía dedicada (el programa va a crear ahí mismo `config.json`, `instances/`, `runtimes/` y `backups/` — conviene que no comparta carpeta con otra cosa).
+Andá a la sección [Releases](../../releases) de este repositorio y descargá el binario de tu plataforma (`.exe` en Windows, sin extensión en Linux) de la última versión. Poné ese archivo solo, en una carpeta vacía dedicada (el programa va a crear ahí mismo `config.json`, `instances/`, `runtimes/` y `backups/` — conviene que no comparta carpeta con otra cosa).
 
 ## Requisitos
 
@@ -92,7 +92,6 @@ No tiene dependencias externas — solo librería estándar de Go.
 
 Cosas planeadas, todavía sin implementar:
 
-- [x] Compatibilidad con Linux — recién agregada, probada acá con tests reales de la extracción de JDK (symlinks, permisos, tar-slip) y del manejo de proceso de Playit (lanzar, detectar vivo, matar), pero todavía no en un servidor Linux de punta a punta. Si algo falla, avisá.
 - [ ] Actualizador automático de la herramienta.
 - [ ] Desactivador de mods de cliente para Forge (hoy el escaneo de mods client-only solo cubre instancias Fabric).
 
