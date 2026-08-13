@@ -64,6 +64,8 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader, javaPath string) err
 		newLoaderVersion, err = serverDownloader.DownloadFabric(newVersion)
 	case "forge":
 		newLoaderVersion, newLaunchArgs, err = serverDownloader.DownloadForge(newVersion)
+	case "neoforge":
+		newLoaderVersion, newLaunchArgs, err = serverDownloader.DownloadNeoForge(newVersion)
 	case "vanilla":
 		newLoaderVersion, err = serverDownloader.DownloadVanilla(newVersion)
 	default:
@@ -109,7 +111,8 @@ func promptLoaderType(reader *bufio.Reader, current string) string {
 	fmt.Println("  1) Paper")
 	fmt.Println("  2) Fabric")
 	fmt.Println("  3) Forge")
-	fmt.Println("  4) Vanilla")
+	fmt.Println("  4) NeoForge")
+	fmt.Println("  5) Vanilla")
 
 	return prompt.LoopDefault(reader, "\n[?] Opción (Enter para mantener actual): ", current, func(input string) (string, bool, string) {
 		switch input {
@@ -120,6 +123,8 @@ func promptLoaderType(reader *bufio.Reader, current string) string {
 		case "3":
 			return "forge", true, ""
 		case "4":
+			return "neoforge", true, ""
+		case "5":
 			return "vanilla", true, ""
 		}
 		return "", false, "Entrada incorrecta, reintente."

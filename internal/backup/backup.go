@@ -12,7 +12,7 @@ import (
 )
 
 // worldDirs son las carpetas de dimensión estándar que genera un servidor
-// vanilla/Paper/Fabric/Forge con la config por defecto (level-name=world).
+// vanilla/Paper/Fabric/Forge/NeoForge con la config por defecto (level-name=world).
 // Solo se incluyen en el backup las que realmente existan.
 var worldDirs = []string{"world", "world_nether", "world_the_end"}
 

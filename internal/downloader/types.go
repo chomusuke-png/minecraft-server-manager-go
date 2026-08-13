@@ -49,3 +49,13 @@ type ForgePromotions struct {
 	Homepage string            `json:"homepage"`
 	Promos   map[string]string `json:"promos"`
 }
+
+// NeoForgeMavenMetadata es la respuesta de maven-metadata.xml del maven de
+// NeoForge: solo trae la lista plana de versiones, en orden de publicación.
+type NeoForgeMavenMetadata struct {
+	Versioning struct {
+		Versions struct {
+			Version []string `xml:"version"`
+		} `xml:"versions"`
+	} `xml:"versioning"`
+}

@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"hash"
 	"io"
@@ -120,6 +121,23 @@ func GetJSON(url string, target interface{}) error {
 	}
 
 	return json.NewDecoder(response.Body).Decode(target)
+}
+
+// GetXML es GetJSON pero para endpoints que responden XML, como el
+// maven-metadata.xml que usa NeoForge para publicar sus versiones.
+func GetXML(url string, target interface{}) error {
+	httpClient := &http.Client{Timeout: 10 * time.Second}
+	response, err := httpClient.Get(url)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("API request failed with status: %d", response.StatusCode)
+	}
+
+	return xml.NewDecoder(response.Body).Decode(target)
 }
 
 // GetText trae el body de url como texto plano, para los sidecars de checksum

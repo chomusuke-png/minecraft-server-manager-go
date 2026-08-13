@@ -1,6 +1,6 @@
 # Minecraft Server Manager
 
-Herramienta de línea de comandos (Windows y Linux) que administra servidores de Minecraft: crea instancias, descarga automáticamente el loader que elijas (Paper, Fabric, Forge o Vanilla), resuelve el Java correcto para cada versión, hace backups del mundo, reinicia el servidor si se cae, y puede exponerlo a internet con un túnel de [Playit.gg](https://playit.gg) sin que tengas que abrir puertos en tu router.
+Herramienta de línea de comandos (Windows y Linux) que administra servidores de Minecraft: crea instancias, descarga automáticamente el loader que elijas (Paper, Fabric, Forge, NeoForge o Vanilla), resuelve el Java correcto para cada versión, hace backups del mundo, reinicia el servidor si se cae, y puede exponerlo a internet con un túnel de [Playit.gg](https://playit.gg) sin que tengas que abrir puertos en tu router.
 
 No hace falta tener Go instalado para usarla — descargá el ejecutable ya compilado para Windows o Linux.
 
@@ -24,7 +24,7 @@ Andá a la sección [Releases](../../releases) de este repositorio y descargá e
    - **RAM** asignada en GB (Enter para usar el valor por defecto de `config.json`).
 4. Como todavía no tiene el jar del servidor, te pregunta si querés descargarlo automáticamente. Si decís que sí:
    - Versión de Minecraft (ej. `1.20.1`).
-   - Tipo de servidor: **Paper**, **Fabric**, **Forge** o **Vanilla**.
+   - Tipo de servidor: **Paper**, **Fabric**, **Forge**, **NeoForge** o **Vanilla**.
    - Si el Java que tenés no es compatible con esa versión, te ofrece conseguir uno (descarga automática de [Adoptium](https://adoptium.net/) o indicar la ruta a un Java que ya tengas instalado).
 5. Configurás `server.properties` la primera vez: MOTD, dificultad, jugadores máximos, `online-mode` y **puerto**. Todo con Enter para aceptar el valor por defecto que se muestra entre corchetes.
 6. Si tenés Playit (o aceptaste descargarlo), se lanza y queda conectado a tu cuenta. En Windows en su propia ventana; en Linux, en la misma consola (y logueado en `playit.log`).
@@ -93,7 +93,7 @@ No tiene dependencias externas — solo librería estándar de Go.
 Cosas planeadas, todavía sin implementar:
 
 - [ ] Actualizador automático de la herramienta.
-- [ ] Desactivador de mods de cliente para Forge (hoy el escaneo de mods client-only solo cubre instancias Fabric).
+- [ ] Desactivador de mods de cliente para Forge/NeoForge (hoy el escaneo de mods client-only solo cubre instancias Fabric).
 
 ## Licencia
 

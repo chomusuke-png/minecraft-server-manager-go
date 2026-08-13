@@ -344,12 +344,13 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 	fmt.Println("1) Paper")
 	fmt.Println("2) Fabric")
 	fmt.Println("3) Forge")
-	fmt.Println("4) Vanilla")
-	fmt.Println("5) Cancel")
+	fmt.Println("4) NeoForge")
+	fmt.Println("5) Vanilla")
+	fmt.Println("6) Cancel")
 
-	choice, ok := prompt.Loop(reader, "\n[?] Option [1-5]: ", func(input string) (string, bool, string) {
+	choice, ok := prompt.Loop(reader, "\n[?] Option [1-6]: ", func(input string) (string, bool, string) {
 		switch input {
-		case "1", "2", "3", "4", "5":
+		case "1", "2", "3", "4", "5", "6":
 			return input, true, ""
 		}
 		return "", false, "Entrada incorrecta, reintente."
@@ -359,7 +360,7 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 		return nil
 	}
 
-	loaderTypes := map[string]string{"1": "paper", "2": "fabric", "3": "forge", "4": "vanilla"}
+	loaderTypes := map[string]string{"1": "paper", "2": "fabric", "3": "forge", "4": "neoforge", "5": "vanilla"}
 	loaderType, isLoader := loaderTypes[choice]
 	if !isLoader {
 		logx.Info("Cancelled.")
@@ -385,6 +386,8 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 		loaderVersion, err = d.DownloadFabric(version)
 	case "forge":
 		loaderVersion, launchArgs, err = d.DownloadForge(version)
+	case "neoforge":
+		loaderVersion, launchArgs, err = d.DownloadNeoForge(version)
 	case "vanilla":
 		loaderVersion, err = d.DownloadVanilla(version)
 	}
