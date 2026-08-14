@@ -76,14 +76,14 @@ Necesitás [Go 1.25+](https://go.dev/dl/):
 
 ```bash
 # Windows
-go build -o minecraft-manager.exe ./cmd
+go build -o msm-windows-amd64.exe ./cmd
 
 # Linux
-go build -o minecraft-manager ./cmd
+go build -o msm-linux-amd64 ./cmd
 
 # Cross-compilar Windows desde Linux (o al revés) sin instalar nada más:
-GOOS=windows GOARCH=amd64 go build -o minecraft-manager.exe ./cmd
-GOOS=linux   GOARCH=amd64 go build -o minecraft-manager     ./cmd
+GOOS=windows GOARCH=amd64 go build -o msm-windows-amd64.exe ./cmd
+GOOS=linux   GOARCH=amd64 go build -o msm-linux-amd64       ./cmd
 ```
 
 ## To-do
