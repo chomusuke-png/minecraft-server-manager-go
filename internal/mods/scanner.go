@@ -23,6 +23,11 @@ func DisableClientMods(serverDir string) {
 		return
 	}
 
+	if err := ensureWhitelist(serverDir); err != nil {
+		logx.Warn("No se pudo crear %s: %v", WhitelistFileName, err)
+	}
+	whitelist := loadWhitelist(serverDir)
+
 	files, err := os.ReadDir(modsDir)
 	if err != nil {
 		logx.Error("Error leyendo carpeta mods: %v", err)
@@ -34,6 +39,11 @@ func DisableClientMods(serverDir string) {
 
 	for _, file := range files {
 		if filepath.Ext(file.Name()) != ".jar" {
+			continue
+		}
+
+		if whitelist[normalizeModName(file.Name())] {
+			logx.Detail("OMITIENDO: %s (protegido por %s)", file.Name(), WhitelistFileName)
 			continue
 		}
 
