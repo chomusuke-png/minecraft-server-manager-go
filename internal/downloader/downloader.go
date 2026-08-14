@@ -23,12 +23,8 @@ type DownloadResult struct {
 	LoaderType    string
 	MCVersion     string
 	LoaderVersion string
-	// LaunchArgs queda vacío salvo para loaders que no producen un jar ejecutable
-	// (Forge >= 1.17), donde reemplaza al '-jar server.jar' del flujo normal.
-	LaunchArgs []string
-	// JavaPath es el runtime que se validó contra la versión de Minecraft, que no
-	// necesariamente es el java_path global de config.json.
-	JavaPath string
+	LaunchArgs    []string
+	JavaPath      string
 }
 
 func New(serverDir string, javaPath string) *Downloader {
@@ -42,11 +38,6 @@ func (d *Downloader) DownloadFile(url string, filename string) error {
 	return d.DownloadFileVerified(url, filename, "", "")
 }
 
-// DownloadFileVerified es DownloadFile pero verificando el contenido contra un
-// checksum conocido (algo: "sha1"/"sha256", expectedHex vacío = sin verificar).
-// Ver httpx.DownloadVerified para el detalle de por qué esto importa: todo lo
-// que pasa por acá se termina ejecutando (jars, instaladores) en la máquina del
-// usuario.
 func (d *Downloader) DownloadFileVerified(url, filename, algo, expectedHex string) error {
 	if err := os.MkdirAll(d.serverDir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -71,8 +62,6 @@ func (d *Downloader) DownloadPaper(version string) (string, error) {
 
 	latestBuild := data.Builds[len(data.Builds)-1]
 
-	// El endpoint de versión solo da el número de build; el nombre real del jar
-	// y su sha256 viven en el endpoint del build puntual.
 	buildDetailsURL := fmt.Sprintf("%s/builds/%d", paperAPIBaseURL, latestBuild)
 	var buildDetails PaperBuildDetails
 	if err := getJSON(buildDetailsURL, &buildDetails); err != nil {
@@ -133,20 +122,12 @@ func (d *Downloader) DownloadFabric(version string) (string, error) {
 		version, loaderVersion, installerVersion,
 	)
 
-	// A diferencia de Paper/Vanilla/Forge, Fabric arma este jar al vuelo por
-	// combinación de versión+loader+installer y no publica un checksum para
-	// esa combinación puntual en ningún endpoint de la API. Sigue siendo HTTPS
-	// directo contra la fuente oficial (sin mirror de por medio), pero sin la
-	// verificación de integridad que sí tienen los demás loaders.
 	if err := d.DownloadFile(jarDownloadURL, "server.jar"); err != nil {
 		return "", err
 	}
 	return loaderVersion, nil
 }
 
-// DownloadForge descarga el instalador, lo ejecuta con --installServer y devuelve
-// la versión del loader junto a los argumentos de arranque resultantes. Ver
-// resolveForgeLaunch para por qué los args pueden venir vacíos.
 func (d *Downloader) DownloadForge(version string) (string, []string, error) {
 	logx.Info("Fetching Forge installer for %s...", version)
 
@@ -155,7 +136,6 @@ func (d *Downloader) DownloadForge(version string) (string, []string, error) {
 		return "", nil, fmt.Errorf("error fetching Forge promotions: %w", err)
 	}
 
-	// Intenta obtener la versión recomendada y luego la más reciente.
 	forgeVersion := promos.Promos[version+"-recommended"]
 	if forgeVersion == "" {
 		forgeVersion = promos.Promos[version+"-latest"]
@@ -174,10 +154,6 @@ func (d *Downloader) DownloadForge(version string) (string, []string, error) {
 		fullVersion,
 	)
 
-	// Maven publica un sidecar '<artefacto>.sha1' junto a cada jar. Es best
-	// effort: si por lo que sea no está (versiones viejas, hiccup del maven),
-	// se sigue sin verificar en vez de bloquear una instalación que hoy
-	// funciona.
 	sha1Hex := ""
 	if sidecar, err := httpx.GetText(downloadURL + ".sha1"); err == nil {
 		if fields := strings.Fields(sidecar); len(fields) > 0 {
@@ -193,7 +169,6 @@ func (d *Downloader) DownloadForge(version string) (string, []string, error) {
 
 	launchArgs, err := d.installForge(fullVersion)
 	if err != nil {
-		// El instalador quedó a medias: no dejarlo tirado en la instancia.
 		d.removeForgeInstaller()
 		return "", nil, err
 	}
@@ -237,8 +212,8 @@ func (d *Downloader) DownloadVanilla(version string) (string, error) {
 	return "", nil
 }
 
-// playitAssetName devuelve el nombre del asset de playit-agent para este
-// SO/arquitectura, tal como lo publica su release de GitHub.
+const playitPinnedVersion = "v0.17.1"
+
 func playitAssetName() (string, error) {
 	switch runtime.GOOS {
 	case "windows":
@@ -248,7 +223,7 @@ func playitAssetName() (string, error) {
 		case "amd64":
 			return "playit-linux-amd64", nil
 		case "arm64":
-			return "playit-linux-arm64", nil
+			return "playit-linux-aarch64", nil
 		default:
 			return "", fmt.Errorf("playit no publica un binario para linux/%s", runtime.GOARCH)
 		}
@@ -264,7 +239,10 @@ func (d *Downloader) DownloadPlayit(playitPath string) error {
 	}
 
 	logx.Info("Downloading Playit.gg Agent...")
-	url := "https://github.com/playit-cloud/playit-agent/releases/latest/download/" + assetName
+	url := fmt.Sprintf(
+		"https://github.com/playit-cloud/playit-agent/releases/download/%s/%s",
+		playitPinnedVersion, assetName,
+	)
 
 	if dir := filepath.Dir(playitPath); dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {
@@ -272,9 +250,6 @@ func (d *Downloader) DownloadPlayit(playitPath string) error {
 		}
 	}
 
-	// GitHub expone en su API el digest sha256 que calculó al recibir el
-	// asset. Es best effort: si la consulta falla (rate limit sin auth, asset
-	// viejo sin digest) se descarga igual, solo que sin verificar.
 	algo, expectedHex := "", ""
 	if hex, err := fetchPlayitSHA256(assetName); err == nil {
 		algo, expectedHex = "sha256", hex
@@ -286,8 +261,6 @@ func (d *Downloader) DownloadPlayit(playitPath string) error {
 		return err
 	}
 
-	// A diferencia del .exe de Windows, el binario de Linux no llega con el
-	// bit de ejecución puesto.
 	if runtime.GOOS != "windows" {
 		if err := os.Chmod(playitPath, 0755); err != nil {
 			return fmt.Errorf("no se pudo marcar '%s' como ejecutable: %w", playitPath, err)
@@ -297,9 +270,6 @@ func (d *Downloader) DownloadPlayit(playitPath string) error {
 	return nil
 }
 
-// fetchPlayitSHA256 consulta el último release en la API de GitHub y devuelve
-// el digest sha256 del asset pedido, tal como lo calculó GitHub al recibir
-// el archivo.
 func fetchPlayitSHA256(assetName string) (string, error) {
 	var release struct {
 		Assets []struct {
@@ -307,7 +277,8 @@ func fetchPlayitSHA256(assetName string) (string, error) {
 			Digest string `json:"digest"`
 		} `json:"assets"`
 	}
-	if err := getJSON("https://api.github.com/repos/playit-cloud/playit-agent/releases/latest", &release); err != nil {
+	url := fmt.Sprintf("https://api.github.com/repos/playit-cloud/playit-agent/releases/tags/%s", playitPinnedVersion)
+	if err := getJSON(url, &release); err != nil {
 		return "", err
 	}
 
@@ -317,11 +288,11 @@ func fetchPlayitSHA256(assetName string) (string, error) {
 		}
 		hex, ok := strings.CutPrefix(asset.Digest, "sha256:")
 		if !ok || hex == "" {
-			return "", fmt.Errorf("release de playit sin digest sha256 para '%s'", assetName)
+			return "", fmt.Errorf("release %s de playit sin digest sha256 para '%s'", playitPinnedVersion, assetName)
 		}
 		return hex, nil
 	}
-	return "", fmt.Errorf("asset '%s' no encontrado en el último release de playit", assetName)
+	return "", fmt.Errorf("asset '%s' no encontrado en el release %s de playit", assetName, playitPinnedVersion)
 }
 
 func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
@@ -367,9 +338,6 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 		return nil
 	}
 
-	// Se resuelve antes de descargar porque el instalador de Forge corre con este
-	// mismo Java, y porque no tiene sentido bajar 300MB de servidor para descubrir
-	// después que no hay runtime capaz de levantarlo.
 	if err := d.resolveJava(reader, loaderType, version); err != nil {
 		logx.Error("\n%v", err)
 		return nil
@@ -412,8 +380,6 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 	}
 }
 
-// resolveJava fija el runtime que usará esta instancia, descargándolo si hace
-// falta. Muta d.javaPath para que el instalador de Forge lo herede.
 func (d *Downloader) resolveJava(reader *bufio.Reader, loaderType string, mcVersion string) error {
 	resolved, err := java.Resolve(reader, java.Require(mcVersion), d.javaPath)
 	if err != nil {
