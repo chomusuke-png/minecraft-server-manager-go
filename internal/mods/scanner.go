@@ -63,6 +63,13 @@ func DisableClientMods(serverDir string) {
 }
 
 func getModEnvironment(jarPath string) (string, error) {
+	if env, err := getFabricModEnvironment(jarPath); err == nil {
+		return env, nil
+	}
+	return getForgeModEnvironment(jarPath)
+}
+
+func getFabricModEnvironment(jarPath string) (string, error) {
 	zipReader, err := zip.OpenReader(jarPath)
 	if err != nil {
 		return "", err

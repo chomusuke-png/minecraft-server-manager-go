@@ -66,7 +66,7 @@ Cada instancia puede pisar su propia RAM, puerto, versión de Java y mínimo de 
 ## Qué hace automáticamente
 
 - **Backups**: antes de cada arranque, si la instancia ya tiene mundo, comprime todas las carpetas de dimensión que existan (`world`, `world_nether`, `world_the_end`) en un único zip dentro de `backups/<instancia>/`. Los backups más viejos que `backup_retention_days` se borran solos, pero nunca se baja del piso mínimo `backup_keep_min` (por instancia o global), sin importar la antigüedad.
-- **Mods client-only**: en instancias Fabric, escanea la carpeta `mods/` y deshabilita (`.jar` → `.jar.disabled`) los mods marcados como exclusivos de cliente, para que no rompan el arranque del servidor.
+- **Mods client-only**: escanea la carpeta `mods/` y deshabilita (`.jar` → `.jar.disabled`) los mods marcados como exclusivos de cliente, para que no rompan el arranque del servidor. En Fabric usa el campo `environment` de `fabric.mod.json`. En Forge y NeoForge no existe un campo oficial equivalente: se usa la misma convención que herramientas como ServerPackCreator, un mod que se autodeclara como su propia dependencia con `side="CLIENT"` en `mods.toml`/`neoforge.mods.toml`. Sin esa autodeclaración no hay forma confiable de saberlo, así que esos mods se dejan sin tocar.
 - **Reinicio automático**: si el servidor se cae de forma abrupta (no por vos), se reinicia solo a los 10 segundos (cancelable con `Ctrl+C`). Si detecta que el problema fue una versión de Java incompatible, te ofrece resolverlo ahí mismo antes de reintentar.
 - **Túnel de Playit**: si tenés el binario configurado, se comparte un único agente entre todas las instancias que tengas corriendo al mismo tiempo — no se abre uno por cada servidor, y se cierra solo cuando cerrás la última instancia que lo estaba usando.
 
@@ -86,14 +86,11 @@ GOOS=windows GOARCH=amd64 go build -o minecraft-manager.exe ./cmd
 GOOS=linux   GOARCH=amd64 go build -o minecraft-manager     ./cmd
 ```
 
-No tiene dependencias externas — solo librería estándar de Go.
-
 ## To-do
 
 Cosas planeadas, todavía sin implementar:
 
 - [ ] Actualizador automático de la herramienta.
-- [ ] Desactivador de mods de cliente para Forge/NeoForge (hoy el escaneo de mods client-only solo cubre instancias Fabric).
 
 ## Licencia
 
