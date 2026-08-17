@@ -85,6 +85,32 @@ func promptRAM(reader *bufio.Reader, defaultValue int) int {
 	})
 }
 
+func DeleteInstance(reader *bufio.Reader, instancePath string) error {
+	name := filepath.Base(instancePath)
+
+	logx.Warn("\nEsto borra '%s' por completo (mundo, backups, todo). No se puede deshacer.", instancePath)
+	confirmed, ok := prompt.Loop(reader, fmt.Sprintf("[?] Escribí '%s' para confirmar (Enter para cancelar): ", name), func(input string) (bool, bool, string) {
+		if input == "" {
+			return false, true, ""
+		}
+		if input == name {
+			return true, true, ""
+		}
+		return false, false, "No coincide, reintentá (o Enter para cancelar)."
+	})
+	if !ok || !confirmed {
+		logx.Info("Cancelado, no se borró nada.")
+		return nil
+	}
+
+	if err := os.RemoveAll(instancePath); err != nil {
+		return fmt.Errorf("no se pudo borrar '%s': %w", instancePath, err)
+	}
+
+	logx.Success("Instancia '%s' borrada.", name)
+	return nil
+}
+
 func PrintInstanceInfo(instanceDir string) {
 	meta, err := LoadMeta(instanceDir)
 	if err != nil {

@@ -43,12 +43,14 @@ Andá a la sección [Releases](../../releases) de este repositorio y descargá e
 1) mi_server    [paper 1.20.1 | 4GB RAM | puerto 25565]
 C) crear nueva instancia
 U) actualizar loader de una instancia
+D) borrar una instancia
 Q) salir
 ```
 
 - Un número selecciona esa instancia y la arranca.
 - `C` crea una instancia nueva.
-- `U` te deja elegir una instancia existente y cambiarle la versión de Minecraft, el tipo de loader, la RAM, el puerto y el mínimo de backups a conservar, sin tener que borrarla y crearla de nuevo.
+- `U` te deja elegir una instancia existente y cambiarle la versión de Minecraft, el tipo de loader, la RAM, el puerto, el túnel y el mínimo de backups a conservar, sin tener que borrarla y crearla de nuevo.
+- `D` te deja elegir una instancia y borrarla por completo (mundo, backups, todo). Pide escribir el nombre exacto para confirmar; cualquier otra cosa (o Enter en blanco) cancela sin tocar nada.
 - `Q` sale del programa.
 
 ## `config.json`

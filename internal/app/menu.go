@@ -31,6 +31,15 @@ func runMenuLoop(reader *bufio.Reader, cfg *config.Config) string {
 			continue
 		}
 
+		if action == "delete" {
+			if selectedInstanceDir != "" {
+				if err := instance.DeleteInstance(reader, selectedInstanceDir); err != nil {
+					logx.Error("Error borrando instancia: %v", err)
+				}
+			}
+			continue
+		}
+
 		return selectedInstanceDir
 	}
 }
@@ -61,6 +70,7 @@ func selectInstanceFlow(reader *bufio.Reader, cfg *config.Config) (string, strin
 
 	fmt.Println("C) crear nueva instancia")
 	fmt.Println("U) actualizar loader de una instancia")
+	fmt.Println("D) borrar una instancia")
 	fmt.Println("Q) salir")
 
 	result, ok := prompt.Loop(reader, "\n[?] Opción: ", func(input string) (menuChoice, bool, string) {
@@ -86,7 +96,13 @@ func selectInstanceFlow(reader *bufio.Reader, cfg *config.Config) (string, strin
 			if len(instances) == 0 {
 				return menuChoice{}, false, "No hay instancias disponibles para actualizar."
 			}
-			return menuChoice{path: selectExistingInstance(reader, instances), action: "update"}, true, ""
+			return menuChoice{path: selectExistingInstance(reader, instances, "actualizar"), action: "update"}, true, ""
+
+		case "D":
+			if len(instances) == 0 {
+				return menuChoice{}, false, "No hay instancias disponibles para borrar."
+			}
+			return menuChoice{path: selectExistingInstance(reader, instances, "borrar"), action: "delete"}, true, ""
 
 		default:
 			idx, err := strconv.Atoi(choice)
@@ -119,8 +135,8 @@ func clearScreen() {
 	cmd.Run()
 }
 
-func selectExistingInstance(reader *bufio.Reader, instances []string) string {
-	fmt.Println("\n[?] Seleccioná la instancia a actualizar:")
+func selectExistingInstance(reader *bufio.Reader, instances []string, purpose string) string {
+	fmt.Printf("\n[?] Seleccioná la instancia a %s:\n", purpose)
 	for i, inst := range instances {
 		instDir := filepath.Join(instance.InstancesRootDir, inst)
 		fmt.Printf("  %d) %s", i+1, inst)
