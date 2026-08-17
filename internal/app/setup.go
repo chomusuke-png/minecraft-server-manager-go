@@ -13,7 +13,33 @@ import (
 	"minecraft-manager/internal/playit"
 	"minecraft-manager/internal/prompt"
 	"minecraft-manager/internal/properties"
+	"minecraft-manager/internal/selfupdate"
 )
+
+func checkForUpdates(reader *bufio.Reader, cfg *config.Config, version string) {
+	if cfg.DisableUpdateCheck || version == "" || version == "dev" {
+		return
+	}
+
+	rel, err := selfupdate.FetchLatest()
+	if err != nil || !selfupdate.IsNewer(rel.Tag, version) {
+		return
+	}
+
+	logx.Info("\nHay una versión nueva disponible: %s (tenés %s).", rel.Tag, version)
+	if !prompt.YesNo(reader, "[?] ¿Actualizar ahora?") {
+		return
+	}
+
+	logx.Info("Descargando %s...", rel.Tag)
+	if err := selfupdate.Apply(rel); err != nil {
+		logx.Error("No se pudo actualizar: %v", err)
+		return
+	}
+
+	logx.Success("Actualizado a %s. Volvé a ejecutar la herramienta.", rel.Tag)
+	os.Exit(0)
+}
 
 func ensureServerJar(reader *bufio.Reader, dir string, cfg *config.Config, dl *downloader.Downloader) bool {
 	jarPath := filepath.Join(dir, cfg.JarName)

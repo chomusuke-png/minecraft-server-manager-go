@@ -65,6 +65,7 @@ Vive al lado del ejecutable y se genera solo la primera vez:
 | `ngrok_authtoken` | Token de cuenta de ngrok, sacado de [dashboard.ngrok.com/get-started/your-authtoken](https://dashboard.ngrok.com/get-started/your-authtoken). Vacío por defecto; sin esto ninguna instancia puede usar ngrok como túnel. |
 | `backup_retention_days` | Cuántos días se conservan los backups del mundo antes de borrarse automáticamente. |
 | `backup_keep_min` | Piso mínimo de backups que se conservan siempre, sin importar cuántos días de retención hayan pasado (por defecto 3). |
+| `disable_update_check` | `true` para no chequear versión nueva al arrancar. Por defecto (`false`/ausente) chequea siempre. |
 
 Cada instancia puede pisar su propia RAM, puerto, versión de Java, mínimo de backups y túnel sin tocar este archivo global (se guarda en su `instance.json`).
 
@@ -74,6 +75,7 @@ Cada instancia puede pisar su propia RAM, puerto, versión de Java, mínimo de b
 - **Mods client-only**: escanea la carpeta `mods/` y deshabilita (`.jar` → `.jar.disabled`) los mods marcados como exclusivos de cliente, para que no rompan el arranque del servidor. En Fabric usa el campo `environment` de `fabric.mod.json`. En Forge y NeoForge no existe un campo oficial equivalente: se usa la misma convención que herramientas como ServerPackCreator, un mod que se autodeclara como su propia dependencia con `side="CLIENT"` en `mods.toml`/`neoforge.mods.toml`. Sin esa autodeclaración no hay forma confiable de saberlo, así que esos mods se dejan sin tocar. Si algún mod se detecta mal, se puede proteger agregándolo a `mods_whitelist.txt` (se genera solo en la raíz de la instancia): un nombre de archivo `.jar` por línea, con o sin extensión, sin importar mayúsculas. Para el caso inverso —un mod de cliente que no se autodeclara y por eso no se detecta— está `mods_blacklist.txt`, con el mismo formato: lo que listes ahí se deshabilita siempre, sin mirar el `.jar`. Si un mod aparece en las dos listas, gana la whitelist.
 - **Reinicio automático**: si el servidor se cae de forma abrupta (no por vos), se reinicia solo a los 10 segundos (cancelable con `Ctrl+C`). Si detecta que el problema fue una versión de Java incompatible, te ofrece resolverlo ahí mismo antes de reintentar.
 - **Túnel**: se elige por instancia (`tunnel_provider` en `instance.json`, editable desde el menú de actualización). Sin ese campo (instancias creadas antes de que existiera esta opción) se sigue tratando como Playit, para no cambiar el comportamiento que ya tenían. Con Playit, si tenés el binario configurado, se comparte un único agente entre todas las instancias que lo usen al mismo tiempo — no se abre uno por cada servidor, y se cierra solo cuando cerrás la última instancia que lo estaba usando. Con ngrok cada instancia lanza su propio proceso, porque el puerto se le pasa por línea de comandos en cada arranque en vez de configurarse del lado de la cuenta como en Playit.
+- **Actualización de la herramienta**: al arrancar, chequea contra los [Releases](../../releases) de este repositorio si hay una versión más nueva. Si la hay, pregunta antes de hacer nada; si aceptás, descarga el binario correspondiente (verificando su checksum contra el digest que publica GitHub) y lo deja instalado en el lugar del actual — el ejecutable viejo queda al lado como `.old` por si el nuevo no arranca. Hace falta reiniciar la herramienta para que tome el cambio. Se puede desactivar con `disable_update_check`. Una build compilada a mano sin el flag de versión (ver más abajo) nunca chequea, porque no tiene con qué comparar.
 
 ## Compilar desde el código fuente
 
@@ -91,11 +93,11 @@ GOOS=windows GOARCH=amd64 go build -o msm-windows-amd64.exe ./cmd
 GOOS=linux   GOARCH=amd64 go build -o msm-linux-amd64       ./cmd
 ```
 
-## To-do
+Una build así queda identificada como `dev` y nunca va a ofrecer actualizarse sola (no tiene versión contra la cual comparar). Los releases oficiales se compilan pisando esa versión:
 
-Cosas planeadas, todavía sin implementar:
-
-- [ ] Actualizador automático de la herramienta.
+```bash
+go build -ldflags "-X main.version=v1.2.0" -o msm-windows-amd64.exe ./cmd
+```
 
 ## Licencia
 

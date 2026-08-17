@@ -15,6 +15,7 @@ type Config struct {
 	NgrokAuthToken      string `json:"ngrok_authtoken,omitempty"`
 	BackupRetentionDays int    `json:"backup_retention_days"`
 	BackupKeepMin       int    `json:"backup_keep_min"`
+	DisableUpdateCheck  bool   `json:"disable_update_check,omitempty"`
 }
 
 func DefaultConfig() *Config {

@@ -16,8 +16,10 @@ import (
 	"minecraft-manager/internal/runner"
 )
 
-func Run(cfg *config.Config) {
+func Run(cfg *config.Config, version string) {
 	reader := bufio.NewReader(os.Stdin)
+
+	checkForUpdates(reader, cfg, version)
 
 	selectedInstanceDir := runMenuLoop(reader, cfg)
 	if selectedInstanceDir == "" {
