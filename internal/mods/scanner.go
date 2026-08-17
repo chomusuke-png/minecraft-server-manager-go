@@ -28,6 +28,11 @@ func DisableClientMods(serverDir string) {
 	}
 	whitelist := loadWhitelist(serverDir)
 
+	if err := ensureBlacklist(serverDir); err != nil {
+		logx.Warn("No se pudo crear %s: %v", BlacklistFileName, err)
+	}
+	blacklist := loadBlacklist(serverDir)
+
 	files, err := os.ReadDir(modsDir)
 	if err != nil {
 		logx.Error("Error leyendo carpeta mods: %v", err)
@@ -48,6 +53,15 @@ func DisableClientMods(serverDir string) {
 		}
 
 		modFilePath := filepath.Join(modsDir, file.Name())
+
+		if blacklist[normalizeModName(file.Name())] {
+			logx.Detail("DESHABILITANDO: %s (listado en %s)", file.Name(), BlacklistFileName)
+			if disableMod(modFilePath) {
+				count++
+			}
+			continue
+		}
+
 		modEnvironment, err := getModEnvironment(modFilePath)
 		if err != nil {
 			continue
@@ -55,11 +69,7 @@ func DisableClientMods(serverDir string) {
 
 		if modEnvironment == "client" {
 			logx.Detail("DESHABILITANDO: %s (Es solo de cliente)", file.Name())
-
-			disabledModPath := modFilePath + ".disabled"
-			if err := os.Rename(modFilePath, disabledModPath); err != nil {
-				logx.Error("Error al deshabilitar: %v", err)
-			} else {
+			if disableMod(modFilePath) {
 				count++
 			}
 		}
@@ -70,6 +80,14 @@ func DisableClientMods(serverDir string) {
 	} else {
 		logx.Detail("Se deshabilitaron %d mods incompatibles.", count)
 	}
+}
+
+func disableMod(modFilePath string) bool {
+	if err := os.Rename(modFilePath, modFilePath+".disabled"); err != nil {
+		logx.Error("Error al deshabilitar: %v", err)
+		return false
+	}
+	return true
 }
 
 func getModEnvironment(jarPath string) (string, error) {
