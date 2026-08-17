@@ -41,7 +41,7 @@ type nameChoice struct {
 	path string
 }
 
-func CreateInstance(reader *bufio.Reader, defaultRAMGB int) (string, int, error) {
+func CreateInstance(reader *bufio.Reader, defaultRAMGB int) (string, int, string, error) {
 	choice, ok := prompt.Loop(reader, "\n[?] Nombre para la nueva instancia (sin espacios): ", func(input string) (nameChoice, bool, string) {
 		if input == "" {
 			return nameChoice{}, false, "El nombre no puede estar vacío. Entrada incorrecta, reintente."
@@ -59,18 +59,19 @@ func CreateInstance(reader *bufio.Reader, defaultRAMGB int) (string, int, error)
 		return nameChoice{name: input, path: path}, true, ""
 	})
 	if !ok {
-		return "", 0, fmt.Errorf("no se pudo leer la entrada")
+		return "", 0, "", fmt.Errorf("no se pudo leer la entrada")
 	}
 	name, instancePath := choice.name, choice.path
 
 	ramGB := promptRAM(reader, defaultRAMGB)
+	tunnelProvider := PromptTunnelProvider(reader)
 
 	if err := os.MkdirAll(instancePath, 0755); err != nil {
-		return "", 0, fmt.Errorf("error creando directorio: %w", err)
+		return "", 0, "", fmt.Errorf("error creando directorio: %w", err)
 	}
 
 	logx.Success("Instancia '%s' creada en '%s' con %dGB de RAM.", name, instancePath, ramGB)
-	return instancePath, ramGB, nil
+	return instancePath, ramGB, tunnelProvider, nil
 }
 
 func promptRAM(reader *bufio.Reader, defaultValue int) int {
@@ -115,9 +116,48 @@ func PromptRAMUpdate(reader *bufio.Reader, current int) int {
 	})
 }
 
-// PromptBackupKeepMinUpdate deja pisar el piso mínimo de backups global por
-// instancia. A diferencia de la RAM, acá 0 es un valor válido: significa
-// "usar el global de config.json".
+func PromptTunnelProvider(reader *bufio.Reader) string {
+	fmt.Println("\n[?] Túnel para exponer el servidor a internet:")
+	fmt.Println("  1) Playit [recomendado]")
+	fmt.Println("  2) ngrok")
+	fmt.Println("  3) Ninguno")
+
+	return prompt.LoopDefault(reader, "[?] Opción (Enter para Playit): ", "playit", func(input string) (string, bool, string) {
+		switch input {
+		case "1":
+			return "playit", true, ""
+		case "2":
+			return "ngrok", true, ""
+		case "3":
+			return "none", true, ""
+		}
+		return "", false, "Entrada incorrecta, reintente."
+	})
+}
+
+func PromptTunnelProviderUpdate(reader *bufio.Reader, current string) string {
+	if current == "" {
+		current = "playit"
+	}
+
+	fmt.Printf("\n[?] Túnel (Enter para mantener '%s'):\n", current)
+	fmt.Println("  1) Playit [recomendado]")
+	fmt.Println("  2) ngrok")
+	fmt.Println("  3) Ninguno")
+
+	return prompt.LoopDefault(reader, "[?] Opción (Enter para mantener actual): ", current, func(input string) (string, bool, string) {
+		switch input {
+		case "1":
+			return "playit", true, ""
+		case "2":
+			return "ngrok", true, ""
+		case "3":
+			return "none", true, ""
+		}
+		return "", false, "Entrada incorrecta, reintente."
+	})
+}
+
 func PromptBackupKeepMinUpdate(reader *bufio.Reader, current int) int {
 	promptText := fmt.Sprintf("[?] Mínimo de backups a conservar (Enter para mantener %d, 0 = usar el global): ", current)
 	if current == 0 {
@@ -132,4 +172,3 @@ func PromptBackupKeepMinUpdate(reader *bufio.Reader, current int) int {
 		return value, true, ""
 	})
 }
-

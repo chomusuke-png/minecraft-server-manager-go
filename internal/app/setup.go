@@ -9,7 +9,10 @@ import (
 	"minecraft-manager/internal/downloader"
 	"minecraft-manager/internal/instance"
 	"minecraft-manager/internal/logx"
+	"minecraft-manager/internal/ngrok"
+	"minecraft-manager/internal/playit"
 	"minecraft-manager/internal/prompt"
+	"minecraft-manager/internal/properties"
 )
 
 func ensureServerJar(reader *bufio.Reader, dir string, cfg *config.Config, dl *downloader.Downloader) bool {
@@ -87,6 +90,61 @@ func ensurePlayit(reader *bufio.Reader, cfg *config.Config, dl *downloader.Downl
 		}
 	} else {
 		logx.Warn("Continuando en modo LAN (sin túnel).")
+	}
+}
+
+func ensureNgrok(reader *bufio.Reader, cfg *config.Config) bool {
+	if fileExists(cfg.NgrokPath) {
+		return true
+	}
+
+	logx.Warn("No se encontró '%s'.", cfg.NgrokPath)
+	if !prompt.YesNo(reader, "[?] ¿Deseas descargar ngrok automáticamente?") {
+		logx.Warn("Continuando en modo LAN (sin túnel).")
+		return false
+	}
+
+	if err := ngrok.Download(cfg.NgrokPath); err != nil {
+		logx.Error("Error descargando ngrok: %v", err)
+		return false
+	}
+	return true
+}
+
+func setupTunnel(reader *bufio.Reader, cfg *config.Config, dl *downloader.Downloader, instanceDir string) func() {
+	tunnelProvider := "playit"
+	if meta, err := instance.LoadMeta(instanceDir); err == nil && meta.TunnelProvider != "" {
+		tunnelProvider = meta.TunnelProvider
+	}
+
+	switch tunnelProvider {
+	case "ngrok":
+		port, ok := properties.ReadPort(instanceDir)
+		if !ok {
+			logx.Warn("No se pudo leer el puerto del servidor, no se inicia ngrok.")
+			return func() {}
+		}
+		if !ensureNgrok(reader, cfg) {
+			return func() {}
+		}
+
+		tunnel, err := ngrok.Start(instanceDir, cfg.NgrokPath, cfg.NgrokAuthToken, port)
+		if err != nil {
+			logx.Error("Error iniciando ngrok: %v", err)
+			return func() {}
+		}
+		logx.Success("Túnel ngrok activo: %s", tunnel.PublicURL)
+		return tunnel.Stop
+
+	case "none":
+		return func() {}
+
+	default:
+		ensurePlayit(reader, cfg, dl)
+		if err := playit.Acquire(cfg); err != nil {
+			logx.Error("Error iniciando Playit: %v", err)
+		}
+		return playit.Release
 	}
 }
 

@@ -11,6 +11,8 @@ type Config struct {
 	JarName             string `json:"jar_name"`
 	RAMGB               int    `json:"ram_gb"`
 	PlayitPath          string `json:"playit_path"`
+	NgrokPath           string `json:"ngrok_path"`
+	NgrokAuthToken      string `json:"ngrok_authtoken,omitempty"`
 	BackupRetentionDays int    `json:"backup_retention_days"`
 	BackupKeepMin       int    `json:"backup_keep_min"`
 }
@@ -21,6 +23,7 @@ func DefaultConfig() *Config {
 		JarName:             "server.jar",
 		RAMGB:               4,
 		PlayitPath:          defaultPlayitPath(),
+		NgrokPath:           defaultNgrokPath(),
 		BackupRetentionDays: 7,
 		BackupKeepMin:       3,
 	}
@@ -31,6 +34,13 @@ func defaultPlayitPath() string {
 		return "playit.exe"
 	}
 	return "playit"
+}
+
+func defaultNgrokPath() string {
+	if runtime.GOOS == "windows" {
+		return "ngrok.exe"
+	}
+	return "ngrok"
 }
 
 func Load() (*Config, error) {

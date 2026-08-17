@@ -12,7 +12,6 @@ import (
 	"minecraft-manager/internal/instance"
 	"minecraft-manager/internal/logx"
 	"minecraft-manager/internal/mods"
-	"minecraft-manager/internal/playit"
 	"minecraft-manager/internal/properties"
 	"minecraft-manager/internal/runner"
 )
@@ -40,12 +39,8 @@ func Run(cfg *config.Config) {
 		return
 	}
 
-	ensurePlayit(reader, cfg, dl)
-
-	if err := playit.Acquire(cfg); err != nil {
-		logx.Error("Error iniciando Playit: %v", err)
-	}
-	defer playit.Release()
+	stopTunnel := setupTunnel(reader, cfg, dl, selectedInstanceDir)
+	defer stopTunnel()
 
 	if err := eula.EnsureEulaAccepted(reader, selectedInstanceDir); err != nil {
 		logx.Error("Error con el EULA: %v", err)

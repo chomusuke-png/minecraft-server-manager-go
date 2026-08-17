@@ -71,12 +71,12 @@ func selectInstanceFlow(reader *bufio.Reader, cfg *config.Config) (string, strin
 			return menuChoice{}, true, ""
 
 		case "C":
-			path, ramGB, err := instance.CreateInstance(reader, cfg.RAMGB)
+			path, ramGB, tunnelProvider, err := instance.CreateInstance(reader, cfg.RAMGB)
 			if err != nil {
 				logx.Error("Error creando instancia: %v", err)
 				return menuChoice{}, true, ""
 			}
-			pendingMeta := instance.InstanceMeta{RAMGB: ramGB}
+			pendingMeta := instance.InstanceMeta{RAMGB: ramGB, TunnelProvider: tunnelProvider}
 			if err := instance.SaveMeta(path, pendingMeta); err != nil {
 				logx.Warn("Advertencia: no se pudo guardar instance.json parcial: %v", err)
 			}

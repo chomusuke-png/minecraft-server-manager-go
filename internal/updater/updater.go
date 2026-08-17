@@ -44,6 +44,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader, javaPath string) err
 
 	updatedRAMGB := instance.PromptRAMUpdate(reader, meta.RAMGB)
 	updatedBackupKeepMin := instance.PromptBackupKeepMinUpdate(reader, meta.BackupKeepMin)
+	updatedTunnelProvider := instance.PromptTunnelProviderUpdate(reader, meta.TunnelProvider)
 
 	// La versión o el loader pueden haber cambiado, así que el Java se revalida
 	// contra el destino y no contra lo que la instancia usaba antes.
@@ -81,6 +82,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader, javaPath string) err
 	meta.LoaderVersion = newLoaderVersion
 	meta.RAMGB = updatedRAMGB
 	meta.BackupKeepMin = updatedBackupKeepMin
+	meta.TunnelProvider = updatedTunnelProvider
 	// Se sobreescribe siempre: dejar los args de un Forge anterior haría que el
 	// runner ignore el server.jar recién descargado por otro loader.
 	meta.LaunchArgs = newLaunchArgs
