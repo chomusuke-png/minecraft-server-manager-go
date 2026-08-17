@@ -43,11 +43,11 @@ func Run(cfg *config.Config, version string) {
 		}
 
 		stopTunnel := setupTunnel(reader, cfg, dl, selectedInstanceDir)
-		defer stopTunnel()
 
 		if err := eula.EnsureEulaAccepted(reader, selectedInstanceDir); err != nil {
 			logx.Error("Error con el EULA: %v", err)
-			return
+			stopTunnel()
+			continue
 		}
 
 		mods.DisableClientMods(selectedInstanceDir)
@@ -65,6 +65,7 @@ func Run(cfg *config.Config, version string) {
 
 		svr := runner.New(cfg)
 		svr.Start(selectedInstanceDir)
+		stopTunnel()
 		return
 	}
 }
