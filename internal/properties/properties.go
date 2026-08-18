@@ -21,7 +21,7 @@ func SetupInitialProperties(reader *bufio.Reader, serverDir string, mcVersion st
 	logx.Info("\nConfiguración Inicial del Mundo (server.properties)")
 
 	motd := promptString(reader, "[?] Nombre/Mensaje del servidor (MOTD)", "Un servidor de Minecraft")
-	difficulty := promptOptions(reader, "[?] Dificultad (peaceful, easy, normal, hard)", []string{"peaceful", "easy", "normal", "hard"}, "normal")
+	difficulty := promptDifficulty(reader)
 	levelType := promptWorldType(reader, mcVersion)
 	maxPlayers := promptInt(reader, "[?] Jugadores máximos", 20)
 	onlineMode := promptBoolean(reader, "[?] ¿Habilitar online-mode (requiere cuenta premium)? (true/false)", true)
@@ -52,17 +52,36 @@ func promptString(reader *bufio.Reader, message, defaultValue string) string {
 	})
 }
 
-func promptOptions(reader *bufio.Reader, message string, validOptions []string, defaultValue string) string {
-	promptText := fmt.Sprintf("%s [%s]: ", message, defaultValue)
-	return prompt.LoopDefault(reader, promptText, defaultValue, func(input string) (string, bool, string) {
-		input = strings.ToLower(input)
-		for _, option := range validOptions {
-			if input == option {
-				return input, true, ""
-			}
+type difficultyOption struct {
+	label string
+	value string
+}
+
+var difficultyOptions = []difficultyOption{
+	{"Pacífico", "peaceful"},
+	{"Fácil", "easy"},
+	{"Normal", "normal"},
+	{"Difícil", "hard"},
+}
+
+const defaultDifficultyChoice = 3
+
+func promptDifficulty(reader *bufio.Reader) string {
+	fmt.Println("\n[?] Dificultad:")
+	for i, d := range difficultyOptions {
+		fmt.Printf("%d) %s\n", i+1, d.label)
+	}
+
+	promptText := fmt.Sprintf("[?] Opción [1-%d] [%d]: ", len(difficultyOptions), defaultDifficultyChoice)
+	choice := prompt.LoopDefault(reader, promptText, defaultDifficultyChoice, func(input string) (int, bool, string) {
+		value, err := strconv.Atoi(input)
+		if err != nil || value < 1 || value > len(difficultyOptions) {
+			return 0, false, fmt.Sprintf("Opción inválida. Elegí un número entre 1 y %d.", len(difficultyOptions))
 		}
-		return "", false, fmt.Sprintf("Opción inválida. Valores permitidos: %v", validOptions)
+		return value, true, ""
 	})
+
+	return difficultyOptions[choice-1].value
 }
 
 func promptInt(reader *bufio.Reader, message string, defaultValue int) int {
