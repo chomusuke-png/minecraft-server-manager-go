@@ -1,6 +1,3 @@
-// Package httpx concentra las descargas HTTP con barra de progreso y el consumo
-// de APIs JSON. Vive aparte de downloader para que otros paquetes (java) puedan
-// descargar sin importarlo y generar un ciclo.
 package httpx
 
 import (
@@ -20,19 +17,10 @@ import (
 	"minecraft-manager/internal/logx"
 )
 
-// Download baja url a destinationPath sin verificar integridad. Solo debería
-// usarse cuando la fuente no publica ningún checksum (ver DownloadVerified).
 func Download(url string, destinationPath string) error {
 	return DownloadVerified(url, destinationPath, "", "")
 }
 
-// DownloadVerified baja url a destinationPath y, si expectedHex no está vacío,
-// verifica el contenido contra ese hash (algo: "sha1" o "sha256") a medida que
-// se escribe a disco, sin pasada extra de lectura.
-//
-// Si el hash no coincide, el archivo se borra y se devuelve error: preferimos
-// un downloader roto a ejecutar en la máquina del usuario un binario que no es
-// el que la fuente dice que es (instalador de Forge, JDK, server.jar, etc.).
 func DownloadVerified(url, destinationPath, algo, expectedHex string) error {
 	logx.Info("Downloading from: %s", url)
 
@@ -123,8 +111,6 @@ func GetJSON(url string, target interface{}) error {
 	return json.NewDecoder(response.Body).Decode(target)
 }
 
-// GetXML es GetJSON pero para endpoints que responden XML, como el
-// maven-metadata.xml que usa NeoForge para publicar sus versiones.
 func GetXML(url string, target interface{}) error {
 	httpClient := &http.Client{Timeout: 10 * time.Second}
 	response, err := httpClient.Get(url)
@@ -140,10 +126,6 @@ func GetXML(url string, target interface{}) error {
 	return xml.NewDecoder(response.Body).Decode(target)
 }
 
-// GetText trae el body de url como texto plano, para los sidecars de checksum
-// (*.sha1) que publican los repositorios Maven junto a cada artefacto. Best
-// effort: un error acá no debería frenar la descarga, solo dejarla sin
-// verificar (ver uso en DownloadForge).
 func GetText(url string) (string, error) {
 	httpClient := &http.Client{Timeout: 10 * time.Second}
 	response, err := httpClient.Get(url)
@@ -161,22 +143,4 @@ func GetText(url string) (string, error) {
 		return "", err
 	}
 	return string(body), nil
-}
-
-type ProgressReader struct {
-	Reader io.Reader
-	Total  int64
-	read   int64
-}
-
-func (pr *ProgressReader) Read(p []byte) (int, error) {
-	n, err := pr.Reader.Read(p)
-	pr.read += int64(n)
-
-	if pr.Total > 0 {
-		percent := float64(pr.read) / float64(pr.Total) * 100
-		fmt.Printf("\r[*] Progress: %.1f%%", percent)
-	}
-
-	return n, err
 }
