@@ -21,7 +21,7 @@ func SetupInitialProperties(reader *bufio.Reader, serverDir string, mcVersion st
 	logx.Info("\nConfiguración Inicial del Mundo (server.properties)")
 
 	motd := promptString(reader, "[?] Nombre/Mensaje del servidor (MOTD)", "Un servidor de Minecraft")
-	difficulty := promptDifficulty(reader)
+	difficulty, hardcore := promptDifficulty(reader)
 	levelType := promptWorldType(reader, mcVersion)
 	maxPlayers := promptInt(reader, "[?] Jugadores máximos", 20)
 	onlineMode := promptBoolean(reader, "[?] ¿Habilitar online-mode (requiere cuenta premium)? (true/false)", true)
@@ -29,12 +29,13 @@ func SetupInitialProperties(reader *bufio.Reader, serverDir string, mcVersion st
 
 	fileContent := fmt.Sprintf("motd=%s\n"+
 		"difficulty=%s\n"+
+		"hardcore=%t\n"+
 		"level-type=%s\n"+
 		"max-players=%d\n"+
 		"online-mode=%t\n"+
 		"allow-flight=true\n"+
 		"server-port=%d\n",
-		motd, difficulty, escapePropertyValue(levelType), maxPlayers, onlineMode, port)
+		motd, difficulty, hardcore, escapePropertyValue(levelType), maxPlayers, onlineMode, port)
 
 	err := os.WriteFile(propertiesPath, []byte(fileContent), 0644)
 	if err != nil {
@@ -53,20 +54,22 @@ func promptString(reader *bufio.Reader, message, defaultValue string) string {
 }
 
 type difficultyOption struct {
-	label string
-	value string
+	label    string
+	value    string
+	hardcore bool
 }
 
 var difficultyOptions = []difficultyOption{
-	{"Pacífico", "peaceful"},
-	{"Fácil", "easy"},
-	{"Normal", "normal"},
-	{"Difícil", "hard"},
+	{"Pacífico", "peaceful", false},
+	{"Fácil", "easy", false},
+	{"Normal", "normal", false},
+	{"Difícil", "hard", false},
+	{"Hardcore", "hard", true},
 }
 
-const defaultDifficultyChoice = 3
+const defaultDifficultyChoice = 4
 
-func promptDifficulty(reader *bufio.Reader) string {
+func promptDifficulty(reader *bufio.Reader) (difficulty string, hardcore bool) {
 	fmt.Println("\n[?] Dificultad:")
 	for i, d := range difficultyOptions {
 		fmt.Printf("%d) %s\n", i+1, d.label)
@@ -81,7 +84,8 @@ func promptDifficulty(reader *bufio.Reader) string {
 		return value, true, ""
 	})
 
-	return difficultyOptions[choice-1].value
+	selected := difficultyOptions[choice-1]
+	return selected.value, selected.hardcore
 }
 
 func promptInt(reader *bufio.Reader, message string, defaultValue int) int {

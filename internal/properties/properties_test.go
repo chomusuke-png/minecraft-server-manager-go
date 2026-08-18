@@ -28,7 +28,8 @@ func TestSetupInitialPropertiesWritesDefaults(t *testing.T) {
 
 	for _, want := range []string{
 		"motd=Un servidor de Minecraft",
-		"difficulty=normal",
+		"difficulty=hard",
+		"hardcore=false",
 		"level-type=minecraft\\:normal",
 		"max-players=20",
 		"online-mode=true",
@@ -61,29 +62,57 @@ func TestSetupInitialPropertiesSkipsIfFileExists(t *testing.T) {
 	}
 }
 
-func TestPromptDifficultyDefaultsToNormalOnEmpty(t *testing.T) {
-	if got := promptDifficulty(readerFor("\n")); got != "normal" {
-		t.Errorf("got %q, want %q", got, "normal")
+func TestPromptDifficultyDefaultsToHardOnEmpty(t *testing.T) {
+	difficulty, hardcore := promptDifficulty(readerFor("\n"))
+	if difficulty != "hard" || hardcore {
+		t.Errorf("got (%q, %v), want (\"hard\", false)", difficulty, hardcore)
 	}
 }
 
 func TestPromptDifficultySelectsByNumber(t *testing.T) {
-	cases := map[string]string{
-		"1\n": "peaceful",
-		"2\n": "easy",
-		"3\n": "normal",
-		"4\n": "hard",
+	cases := map[string]struct {
+		difficulty string
+		hardcore   bool
+	}{
+		"1\n": {"peaceful", false},
+		"2\n": {"easy", false},
+		"3\n": {"normal", false},
+		"4\n": {"hard", false},
+		"5\n": {"hard", true},
 	}
 	for input, want := range cases {
-		if got := promptDifficulty(readerFor(input)); got != want {
-			t.Errorf("promptDifficulty(%q) = %q, want %q", input, got, want)
+		difficulty, hardcore := promptDifficulty(readerFor(input))
+		if difficulty != want.difficulty || hardcore != want.hardcore {
+			t.Errorf("promptDifficulty(%q) = (%q, %v), want (%q, %v)", input, difficulty, hardcore, want.difficulty, want.hardcore)
 		}
 	}
 }
 
 func TestPromptDifficultyRetriesOnInvalidInput(t *testing.T) {
-	if got := promptDifficulty(readerFor("0\n9\n2\n")); got != "easy" {
-		t.Errorf("got %q", got)
+	difficulty, hardcore := promptDifficulty(readerFor("0\n9\n2\n"))
+	if difficulty != "easy" || hardcore {
+		t.Errorf("got (%q, %v)", difficulty, hardcore)
+	}
+}
+
+func TestSetupInitialPropertiesHardcoreSetsDifficultyHardAndHardcoreTrue(t *testing.T) {
+	dir := t.TempDir()
+
+	// MOTD, dificultad=5 (Hardcore), tipo de mundo, jugadores, online-mode, puerto.
+	if err := SetupInitialProperties(readerFor("\n5\n\n\n\n\n"), dir, "1.20.1"); err != nil {
+		t.Fatal(err)
+	}
+
+	content, err := os.ReadFile(filepath.Join(dir, "server.properties"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(content)
+
+	for _, want := range []string{"difficulty=hard", "hardcore=true"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("falta %q en:\n%s", want, got)
+		}
 	}
 }
 
