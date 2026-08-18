@@ -32,6 +32,7 @@ func SetupInitialProperties(reader *bufio.Reader, serverDir string, mcVersion st
 		"level-type=%s\n"+
 		"max-players=%d\n"+
 		"online-mode=%t\n"+
+		"allow-flight=true\n"+
 		"server-port=%d\n",
 		motd, difficulty, escapePropertyValue(levelType), maxPlayers, onlineMode, port)
 
