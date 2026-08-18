@@ -46,8 +46,6 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader, javaPath string) err
 	updatedBackupKeepMin := instance.PromptBackupKeepMinUpdate(reader, meta.BackupKeepMin)
 	updatedTunnelProvider := instance.PromptTunnelProviderUpdate(reader, meta.TunnelProvider)
 
-	// La versión o el loader pueden haber cambiado, así que el Java se revalida
-	// contra el destino y no contra lo que la instancia usaba antes.
 	resolvedJava, err := java.Resolve(reader, java.Require(newVersion), preferredJava(meta, javaPath))
 	if err != nil {
 		return err
@@ -83,8 +81,6 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader, javaPath string) err
 	meta.RAMGB = updatedRAMGB
 	meta.BackupKeepMin = updatedBackupKeepMin
 	meta.TunnelProvider = updatedTunnelProvider
-	// Se sobreescribe siempre: dejar los args de un Forge anterior haría que el
-	// runner ignore el server.jar recién descargado por otro loader.
 	meta.LaunchArgs = newLaunchArgs
 	meta.JavaPath = resolvedJava
 	if err := instance.SaveMeta(instanceDir, *meta); err != nil {
@@ -99,8 +95,6 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader, javaPath string) err
 	return nil
 }
 
-// preferredJava arranca la resolución desde el runtime que la instancia ya venía
-// usando, y recién si no tiene uno cae al global.
 func preferredJava(meta *instance.InstanceMeta, globalJavaPath string) string {
 	if meta.JavaPath != "" {
 		return meta.JavaPath
@@ -110,11 +104,11 @@ func preferredJava(meta *instance.InstanceMeta, globalJavaPath string) string {
 
 func promptLoaderType(reader *bufio.Reader, current string) string {
 	fmt.Printf("\n[?] Tipo de loader (Enter para mantener '%s'):\n", current)
-	fmt.Println("  1) Paper")
-	fmt.Println("  2) Fabric")
-	fmt.Println("  3) Forge")
-	fmt.Println("  4) NeoForge")
-	fmt.Println("  5) Vanilla")
+	fmt.Println("1) Paper")
+	fmt.Println("2) Fabric")
+	fmt.Println("3) Forge")
+	fmt.Println("4) NeoForge")
+	fmt.Println("5) Vanilla")
 
 	return prompt.LoopDefault(reader, "\n[?] Opción (Enter para mantener actual): ", current, func(input string) (string, bool, string) {
 		switch input {

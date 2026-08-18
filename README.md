@@ -85,20 +85,20 @@ Necesitás [Go 1.25+](https://go.dev/dl/):
 
 ```bash
 # Windows
-go build -o msm-windows-amd64.exe ./cmd
+go build -o builds/msm-windows-amd64.exe ./cmd
 
 # Linux
-go build -o msm-linux-amd64 ./cmd
+go build -o builds/msm-linux-amd64 ./cmd
 
 # Cross-compilar Windows desde Linux (o al revés) sin instalar nada más:
-GOOS=windows GOARCH=amd64 go build -o msm-windows-amd64.exe ./cmd
-GOOS=linux   GOARCH=amd64 go build -o msm-linux-amd64       ./cmd
+GOOS=windows GOARCH=amd64 go build -o builds/msm-windows-amd64.exe ./cmd
+GOOS=linux   GOARCH=amd64 go build -o builds/msm-linux-amd64       ./cmd
 ```
 
 Una build así queda identificada como `dev` y nunca va a ofrecer actualizarse sola (no tiene versión contra la cual comparar). Los releases oficiales se compilan pisando esa versión:
 
 ```bash
-go build -ldflags "-X main.version=v1.2.0" -o msm-windows-amd64.exe ./cmd
+go build -ldflags "-X main.version=v1.2.0" -o builds/msm-windows-amd64.exe ./cmd
 ```
 
 ## Licencia

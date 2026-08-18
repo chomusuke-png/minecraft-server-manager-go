@@ -28,7 +28,6 @@ func Loop[T any](reader *bufio.Reader, promptText string, accept func(input stri
 	}
 }
 
-// YesNo hace una pregunta de sí/no. Si no se pudo leer la respuesta asume 'no'.
 func YesNo(reader *bufio.Reader, question string) bool {
 	value, ok := Loop(reader, fmt.Sprintf("%s (y/n): ", question), func(input string) (bool, bool, string) {
 		switch strings.ToLower(input) {
