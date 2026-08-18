@@ -37,7 +37,12 @@ func Run(cfg *config.Config, version string) {
 			continue
 		}
 
-		if err := properties.SetupInitialProperties(reader, selectedInstanceDir); err != nil {
+		mcVersion := ""
+		if meta, err := instance.LoadMeta(selectedInstanceDir); err == nil {
+			mcVersion = meta.MCVersion
+		}
+
+		if err := properties.SetupInitialProperties(reader, selectedInstanceDir, mcVersion); err != nil {
 			logx.Error("Error configurando propiedades: %v", err)
 			return
 		}

@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func SetupInitialProperties(reader *bufio.Reader, serverDir string) error {
+func SetupInitialProperties(reader *bufio.Reader, serverDir string, mcVersion string) error {
 	propertiesPath := filepath.Join(serverDir, "server.properties")
 
 	if _, err := os.Stat(propertiesPath); err == nil {
@@ -22,16 +22,18 @@ func SetupInitialProperties(reader *bufio.Reader, serverDir string) error {
 
 	motd := promptString(reader, "[?] Nombre/Mensaje del servidor (MOTD)", "Un servidor de Minecraft")
 	difficulty := promptOptions(reader, "[?] Dificultad (peaceful, easy, normal, hard)", []string{"peaceful", "easy", "normal", "hard"}, "normal")
+	levelType := promptWorldType(reader, mcVersion)
 	maxPlayers := promptInt(reader, "[?] Jugadores máximos", 20)
 	onlineMode := promptBoolean(reader, "[?] ¿Habilitar online-mode (requiere cuenta premium)? (true/false)", true)
 	port := promptPort(reader, "[?] Puerto del servidor", 25565)
 
 	fileContent := fmt.Sprintf("motd=%s\n"+
 		"difficulty=%s\n"+
+		"level-type=%s\n"+
 		"max-players=%d\n"+
 		"online-mode=%t\n"+
 		"server-port=%d\n",
-		motd, difficulty, maxPlayers, onlineMode, port)
+		motd, difficulty, escapePropertyValue(levelType), maxPlayers, onlineMode, port)
 
 	err := os.WriteFile(propertiesPath, []byte(fileContent), 0644)
 	if err != nil {

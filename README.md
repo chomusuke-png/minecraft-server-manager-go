@@ -29,7 +29,7 @@ Andá a la sección [Releases](../../releases) de este repositorio y descargá e
    - Versión de Minecraft (ej. `1.20.1`).
    - Tipo de servidor: **Paper**, **Fabric**, **Forge**, **NeoForge** o **Vanilla**.
    - Si el Java que tenés no es compatible con esa versión, te ofrece conseguir uno (descarga automática de [Adoptium](https://adoptium.net/) o indicar la ruta a un Java que ya tengas instalado).
-5. Configurás `server.properties` la primera vez: MOTD, dificultad, jugadores máximos, `online-mode` y **puerto**. Todo con Enter para aceptar el valor por defecto que se muestra entre corchetes.
+5. Configurás `server.properties` la primera vez: MOTD, dificultad, tipo de mundo (normal, plano, biomas grandes o amplificado), jugadores máximos, `online-mode` y **puerto**. Todo con Enter para aceptar el valor por defecto que se muestra entre corchetes.
 6. Si la instancia usa un túnel (o aceptaste descargarlo), se lanza. Con Playit, en Windows en su propia ventana y en Linux en la misma consola (logueado en `playit.log`). Con ngrok, la URL pública se imprime en consola y queda en `ngrok.log` dentro de la instancia.
 7. Aceptás el EULA de Mojang (obligatorio para que el servidor arranque).
 8. El servidor arranca. Podés escribir comandos de consola de Minecraft directamente en esa misma terminal (`stop`, `say hola`, etc.) — se reenvían al proceso del servidor. `Ctrl+C` hace un apagado prolijo (guarda el mundo antes de cerrar).
