@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 const InstancesRootDir = "instances"
@@ -111,20 +112,80 @@ func DeleteInstance(reader *bufio.Reader, instancePath string) error {
 	return nil
 }
 
-func PrintInstanceInfo(instanceDir string) {
-	meta, err := LoadMeta(instanceDir)
-	if err != nil {
-		return
+// instanceColumns son los encabezados de la tabla de instancias del menu
+var instanceColumns = []string{"NOMBRE", "LOADER", "VERSION", "RAM", "PUERTO", "TUNEL"}
+
+// FormatInstanceTable arma la tabla de instancias
+func FormatInstanceTable(names []string) (string, []string) {
+	cells := make([][]string, 0, len(names))
+	for _, name := range names {
+		cells = append(cells, instanceCells(name))
 	}
 
-	info := fmt.Sprintf("%s %s", meta.LoaderType, meta.MCVersion)
-	if meta.RAMGB > 0 {
-		info += fmt.Sprintf(" | %dGB RAM", meta.RAMGB)
+	widths := make([]int, len(instanceColumns))
+	for i, column := range instanceColumns {
+		widths[i] = len(column)
 	}
-	if port, ok := properties.ReadPort(instanceDir); ok {
-		info += fmt.Sprintf(" | puerto %d", port)
+	for _, row := range cells {
+		for i, value := range row {
+			if width := utf8.RuneCountInString(value); width > widths[i] {
+				widths[i] = width
+			}
+		}
 	}
-	fmt.Printf("    [%s]", info)
+
+	rows := make([]string, 0, len(cells))
+	for _, row := range cells {
+		rows = append(rows, joinColumns(row, widths))
+	}
+	return joinColumns(instanceColumns, widths), rows
+}
+
+// instanceCells lee los datos de una instancia y devuelve el valor de cada
+// columna, con "-" en los que todavia no existen
+func instanceCells(name string) []string {
+	instanceDir := filepath.Join(InstancesRootDir, name)
+	loader, version, ram, tunnel := "-", "-", "-", "-"
+
+	if meta, err := LoadMeta(instanceDir); err == nil {
+		if meta.LoaderType != "" {
+			loader = meta.LoaderType
+		}
+		if meta.MCVersion != "" {
+			version = meta.MCVersion
+		}
+		if meta.RAMGB > 0 {
+			ram = fmt.Sprintf("%dGB", meta.RAMGB)
+		}
+		// sin proveedor guardado se usa Playit
+		tunnel = "playit"
+		if meta.TunnelProvider != "" {
+			tunnel = meta.TunnelProvider
+		}
+	}
+
+	port := "-"
+	if value, ok := properties.ReadPort(instanceDir); ok {
+		port = strconv.Itoa(value)
+	}
+
+	return []string{name, loader, version, ram, port, tunnel}
+}
+
+// joinColumns pega los valores de una fila rellenando cada uno hasta el ancho
+// de su columna, sin dejar espacios al final de la linea
+func joinColumns(values []string, widths []int) string {
+	var row strings.Builder
+	for i, value := range values {
+		if i > 0 {
+			row.WriteString("  ")
+		}
+		row.WriteString(value)
+		if i < len(values)-1 {
+			row.WriteString(strings.Repeat(" ", widths[i]-utf8.RuneCountInString(value)))
+		}
+	}
+	return row.String()
 }
 
 func PromptRAMUpdate(reader *bufio.Reader, current int) int {

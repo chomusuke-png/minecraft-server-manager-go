@@ -37,13 +37,15 @@ Andá a la sección [Releases](../../releases) de este repositorio y descargá e
 ## El menú principal
 
 ```
-============================================================
-  MINECRAFT SERVER MANAGER                            v1.2.0
+==========================================================================================
+  MINECRAFT SERVER MANAGER                                                          v1.2.0
   por chomusuke-png (Zumito)
-============================================================
+==========================================================================================
 
   INSTANCIAS
-    1) mi_server    [paper 1.20.1 | 4GB RAM | puerto 25565]
+       NOMBRE             LOADER    VERSION  RAM  PUERTO  TUNEL
+    1) mi_server          paper     1.20.1   4GB  25565   playit
+    2) survival-hardcore  fabric    1.21.1   6GB  25570   ngrok
 
   ACCIONES
     C) crear nueva instancia

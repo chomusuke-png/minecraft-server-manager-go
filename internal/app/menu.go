@@ -20,7 +20,7 @@ import (
 const (
 	appName     = "MINECRAFT SERVER MANAGER"
 	appAuthor   = "chomusuke-png (Zumito)"
-	headerWidth = 60
+	headerWidth = 90
 )
 
 func runMenuLoop(reader *bufio.Reader, cfg *config.Config, version string) string {
@@ -137,11 +137,18 @@ func printInstances(instances []string) {
 		return
 	}
 
-	for i, inst := range instances {
-		instDir := filepath.Join(instance.InstancesRootDir, inst)
-		fmt.Printf("    %d) %s", i+1, inst)
-		instance.PrintInstanceInfo(instDir)
-		fmt.Println()
+	printInstanceTable(instances, "    ")
+}
+
+// printInstanceTable imprime la tabla numerada de instancias, con el
+// encabezado de columnas alineado sobre la primera de ellas
+func printInstanceTable(instances []string, indent string) {
+	header, rows := instance.FormatInstanceTable(instances)
+	numberWidth := len(strconv.Itoa(len(instances)))
+
+	fmt.Printf("%s%s%s\n", indent, strings.Repeat(" ", numberWidth+2), header)
+	for i, row := range rows {
+		fmt.Printf("%s%*d) %s\n", indent, numberWidth, i+1, row)
 	}
 }
 
@@ -171,12 +178,7 @@ func clearScreen() {
 
 func selectExistingInstance(reader *bufio.Reader, instances []string, purpose string) string {
 	fmt.Printf("\n[?] Seleccioná la instancia a %s:\n", purpose)
-	for i, inst := range instances {
-		instDir := filepath.Join(instance.InstancesRootDir, inst)
-		fmt.Printf("  %d) %s", i+1, inst)
-		instance.PrintInstanceInfo(instDir)
-		fmt.Println()
-	}
+	printInstanceTable(instances, "  ")
 
 	path, ok := prompt.Loop(reader, "[?] Opción: ", func(input string) (string, bool, string) {
 		idx, err := strconv.Atoi(input)
