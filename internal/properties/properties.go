@@ -72,7 +72,7 @@ const defaultDifficultyChoice = 4
 func promptDifficulty(reader *bufio.Reader) (difficulty string, hardcore bool) {
 	fmt.Println("\n[?] Dificultad:")
 	for i, d := range difficultyOptions {
-		fmt.Printf("%d) %s\n", i+1, d.label)
+		fmt.Printf("  %d) %s\n", i+1, d.label)
 	}
 
 	promptText := fmt.Sprintf("[?] Opción [1-%d] [%d]: ", len(difficultyOptions), defaultDifficultyChoice)

@@ -307,13 +307,13 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 		return nil
 	}
 
-	fmt.Printf("\nTipo de servidor para %s:\n", version)
-	fmt.Println("1) Paper")
-	fmt.Println("2) Fabric")
-	fmt.Println("3) Forge")
-	fmt.Println("4) NeoForge")
-	fmt.Println("5) Vanilla")
-	fmt.Println("6) Cancelar")
+	fmt.Printf("\n[?] Tipo de servidor para %s:\n", version)
+	fmt.Println("  1) Paper")
+	fmt.Println("  2) Fabric")
+	fmt.Println("  3) Forge")
+	fmt.Println("  4) NeoForge")
+	fmt.Println("  5) Vanilla")
+	fmt.Println("  6) Cancelar")
 
 	choice, ok := prompt.Loop(reader, "\n[?] Opción [1-6]: ", func(input string) (string, bool, string) {
 		switch input {

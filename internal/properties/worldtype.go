@@ -25,7 +25,7 @@ var worldTypes = []worldType{
 func promptWorldType(reader *bufio.Reader, mcVersion string) string {
 	fmt.Println("\n[?] Tipo de mundo:")
 	for i, wt := range worldTypes {
-		fmt.Printf("%d) %s\n", i+1, wt.label)
+		fmt.Printf("  %d) %s\n", i+1, wt.label)
 	}
 
 	choice := prompt.LoopDefault(reader, "[?] Opción [1-4] [1]: ", 1, func(input string) (int, bool, string) {
