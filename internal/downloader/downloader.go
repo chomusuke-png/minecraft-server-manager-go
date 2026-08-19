@@ -136,9 +136,9 @@ func (d *Downloader) DownloadForge(version string) (string, []string, error) {
 		return "", nil, fmt.Errorf("error fetching Forge promotions: %w", err)
 	}
 
-	forgeVersion := promos.Promos[version+"-recommended"]
+	forgeVersion := promos.Promos[version+"-latest"]
 	if forgeVersion == "" {
-		forgeVersion = promos.Promos[version+"-latest"]
+		forgeVersion = promos.Promos[version+"-recommended"]
 	}
 
 	if forgeVersion == "" {
