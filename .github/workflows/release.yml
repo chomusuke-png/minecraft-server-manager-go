@@ -1,0 +1,84 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Compilar y publicar binarios
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Tests
+        run: go test ./...
+
+      - name: Compilar
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          mkdir -p builds
+          GOOS=windows GOARCH=amd64 go build -ldflags "-X main.version=$VERSION" -o builds/msm-windows-amd64.exe ./cmd
+          GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=$VERSION" -o builds/msm-linux-amd64 ./cmd
+
+      - name: Verificar los binarios
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          # cada binario tiene que ser de su plataforma y traer la version del tag
+          verificar() {
+            archivo=$1
+            plataforma=$2
+            info=$(go version -m "$archivo")
+
+            if ! echo "$info" | grep -q "GOOS=$plataforma"; then
+              echo "$archivo no esta compilado para $plataforma"
+              echo "$info"
+              exit 1
+            fi
+
+            if ! echo "$info" | grep -q -- "-ldflags=\"-X main.version=$VERSION\""; then
+              echo "$archivo no quedo sellado con la version $VERSION"
+              echo "$info"
+              exit 1
+            fi
+
+            echo "$archivo: $plataforma, $VERSION"
+          }
+
+          verificar builds/msm-windows-amd64.exe windows
+          verificar builds/msm-linux-amd64 linux
+
+          # dos assets con el mismo contenido significa que uno se subio con el
+          # nombre del otro, que es como se rompio el release de la v1.4.0
+          windows=$(sha256sum builds/msm-windows-amd64.exe | cut -d " " -f 1)
+          linux=$(sha256sum builds/msm-linux-amd64 | cut -d " " -f 1)
+          if [ "$windows" = "$linux" ]; then
+            echo "los dos binarios son el mismo archivo"
+            exit 1
+          fi
+
+          echo "sha256 windows: $windows"
+          echo "sha256 linux:   $linux"
+
+      - name: Publicar en el release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          # si el release ya existe se le reemplazan los binarios, y si no se
+          # crea como borrador para escribirle las notas a mano
+          if gh release view "$VERSION" > /dev/null 2>&1; then
+            gh release upload "$VERSION" builds/msm-windows-amd64.exe builds/msm-linux-amd64 --clobber
+          else
+            gh release create "$VERSION" builds/msm-windows-amd64.exe builds/msm-linux-amd64 --draft --title "$VERSION" --notes "Pendiente de completar."
+          fi

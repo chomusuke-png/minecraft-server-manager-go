@@ -1,5 +1,7 @@
 # Minecraft Server Manager
 
+[![CI](https://github.com/chomusuke-png/minecraft-server-manager-go/actions/workflows/ci.yml/badge.svg)](https://github.com/chomusuke-png/minecraft-server-manager-go/actions/workflows/ci.yml)
+
 Herramienta de línea de comandos (Windows y Linux) que administra servidores de Minecraft: crea instancias, descarga automáticamente el loader que elijas (Paper, Fabric, Forge, NeoForge o Vanilla), resuelve el Java correcto para cada versión, hace backups del mundo, reinicia el servidor si se cae, y puede exponerlo a internet con un túnel ([Playit.gg](https://playit.gg) o [ngrok](https://ngrok.com), a elección por instancia) sin que tengas que abrir puertos en tu router.
 
 No hace falta tener Go instalado para usarla — descargá el ejecutable ya compilado para Windows o Linux.
