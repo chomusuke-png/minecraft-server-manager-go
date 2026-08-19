@@ -50,7 +50,7 @@ func Download(ngrokPath string) error {
 
 	if dir := filepath.Dir(ngrokPath); dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory: %w", err)
+			return fmt.Errorf("error creando el directorio: %w", err)
 		}
 	}
 

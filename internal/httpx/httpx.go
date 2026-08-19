@@ -22,7 +22,7 @@ func Download(url string, destinationPath string) error {
 }
 
 func DownloadVerified(url, destinationPath, algo, expectedHex string) error {
-	logx.Info("Downloading from: %s", url)
+	logx.Info("Descargando desde: %s", url)
 
 	response, err := http.Get(url)
 	if err != nil {
@@ -31,7 +31,7 @@ func DownloadVerified(url, destinationPath, algo, expectedHex string) error {
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("server returned non-200 status: %s", response.Status)
+		return fmt.Errorf("el servidor respondió con estado %s", response.Status)
 	}
 
 	outputFile, err := os.Create(destinationPath)
@@ -64,7 +64,7 @@ func DownloadVerified(url, destinationPath, algo, expectedHex string) error {
 		return closeErr
 	}
 
-	logx.Info("\nDownload completed.")
+	logx.Success("\nDescarga completada.")
 
 	if hasher == nil || expectedHex == "" {
 		return nil
@@ -105,7 +105,7 @@ func GetJSON(url string, target interface{}) error {
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("API request failed with status: %d", response.StatusCode)
+		return fmt.Errorf("la API respondió con estado %d", response.StatusCode)
 	}
 
 	return json.NewDecoder(response.Body).Decode(target)
@@ -120,7 +120,7 @@ func GetXML(url string, target interface{}) error {
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("API request failed with status: %d", response.StatusCode)
+		return fmt.Errorf("la API respondió con estado %d", response.StatusCode)
 	}
 
 	return xml.NewDecoder(response.Body).Decode(target)
@@ -135,7 +135,7 @@ func GetText(url string) (string, error) {
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("request failed with status: %d", response.StatusCode)
+		return "", fmt.Errorf("la petición falló con estado %d", response.StatusCode)
 	}
 
 	body, err := io.ReadAll(response.Body)

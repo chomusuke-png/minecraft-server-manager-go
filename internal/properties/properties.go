@@ -39,7 +39,7 @@ func SetupInitialProperties(reader *bufio.Reader, serverDir string, mcVersion st
 
 	err := os.WriteFile(propertiesPath, []byte(fileContent), 0644)
 	if err != nil {
-		return fmt.Errorf("failed to write server.properties: %w", err)
+		return fmt.Errorf("error escribiendo server.properties: %w", err)
 	}
 
 	logx.Success("Archivo server.properties generado exitosamente.")
@@ -185,7 +185,7 @@ func UpdatePort(reader *bufio.Reader, serverDir string) error {
 	}
 
 	if err := os.WriteFile(propertiesPath, []byte(strings.Join(lines, "\n")), 0644); err != nil {
-		return fmt.Errorf("failed to update server-port: %w", err)
+		return fmt.Errorf("error actualizando server-port: %w", err)
 	}
 
 	logx.Success("Puerto actualizado a %d.", newPort)
