@@ -77,23 +77,22 @@ func TestGetConfigPathPrefersCwd(t *testing.T) {
 	}
 }
 
-func TestGetConfigPathFallsBackToParent(t *testing.T) {
+func TestGetConfigPathIgnoraElDirectorioPadre(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "config.json"), "{}")
 
-	sub := filepath.Join(dir, "cmd")
+	sub := filepath.Join(dir, "builds")
 	if err := os.Mkdir(sub, 0755); err != nil {
 		t.Fatal(err)
 	}
 	t.Chdir(sub)
 
-	want := "../config.json"
-	if got := getConfigPath(); got != want {
-		t.Errorf("got %q, want %q", got, want)
+	if got := getConfigPath(); got != "config.json" {
+		t.Errorf("got %q, want %q", got, "config.json")
 	}
 }
 
-func TestGetConfigPathDefaultsToCwdNameWithoutAnyMarker(t *testing.T) {
+func TestGetConfigPathDefaultsToCwdName(t *testing.T) {
 	t.Chdir(t.TempDir())
 
 	if got := getConfigPath(); got != "config.json" {

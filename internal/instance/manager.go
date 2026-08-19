@@ -3,6 +3,7 @@ package instance
 import (
 	"bufio"
 	"fmt"
+	"minecraft-manager/internal/approot"
 	"minecraft-manager/internal/logx"
 	"minecraft-manager/internal/prompt"
 	"minecraft-manager/internal/properties"
@@ -13,7 +14,7 @@ import (
 	"unicode/utf8"
 )
 
-const InstancesRootDir = "instances"
+var InstancesRootDir = approot.Path("instances")
 
 func GetAvailableInstances() ([]string, error) {
 	if _, err := os.Stat(InstancesRootDir); os.IsNotExist(err) {

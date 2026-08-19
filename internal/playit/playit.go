@@ -3,6 +3,7 @@ package playit
 import (
 	"encoding/json"
 	"fmt"
+	"minecraft-manager/internal/approot"
 	"minecraft-manager/internal/config"
 	"os"
 	"path/filepath"
@@ -10,10 +11,13 @@ import (
 )
 
 const (
-	registryPath   = "playit_registry.json"
-	lockPath       = registryPath + ".lock"
 	lockStaleAfter = 5 * time.Second
 	lockTimeout    = 10 * time.Second
+)
+
+var (
+	registryPath = approot.Path("playit_registry.json")
+	lockPath     = registryPath + ".lock"
 )
 
 type registry struct {

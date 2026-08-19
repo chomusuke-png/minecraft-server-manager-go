@@ -62,7 +62,7 @@ Andá a la sección [Releases](../../releases) de este repositorio y descargá e
 
 ## `config.json`
 
-Vive al lado del ejecutable y se genera solo la primera vez:
+Vive al lado del ejecutable y se genera solo la primera vez. Lo mismo vale para todo lo demás que crea el programa (`instances/`, `runtimes/`, `backups/` y el registro de Playit).
 
 | Campo | Qué hace |
 |---|---|
@@ -105,7 +105,7 @@ GOOS=linux   GOARCH=amd64 go build -o builds/msm-linux-amd64       ./cmd
 Una build así queda identificada como `dev` y nunca va a ofrecer actualizarse sola (no tiene versión contra la cual comparar). Los releases oficiales se compilan pisando esa versión:
 
 ```bash
-go build -ldflags "-X main.version=v1.2.0" -o builds/msm-windows-amd64.exe ./cmd
+go build -ldflags "-X main.version=vx.x.x" -o builds/msm-windows-amd64.exe ./cmd
 ```
 
 ## Licencia

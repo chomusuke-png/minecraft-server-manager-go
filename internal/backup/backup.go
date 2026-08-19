@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
+	"minecraft-manager/internal/approot"
 	"minecraft-manager/internal/logx"
 	"os"
 	"path/filepath"
@@ -28,7 +29,7 @@ type BackupManager struct {
 // backups que nunca se borra, sin importar cuántos días de retención hayan
 // pasado.
 func New(serverDir, instanceName string, retentionDays, keepMin int) *BackupManager {
-	backupDir := filepath.Join("backups", instanceName)
+	backupDir := filepath.Join(approot.Path("backups"), instanceName)
 	if err := os.MkdirAll(backupDir, 0755); err != nil {
 		logx.Error("No se pudo crear carpeta de backups '%s': %v", backupDir, err)
 	}

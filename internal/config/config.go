@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"minecraft-manager/internal/approot"
 	"os"
 	"runtime"
 )
@@ -52,7 +53,7 @@ func Load() (*Config, error) {
 		if err := saveConfig(configPath, defaultCfg); err != nil {
 			return nil, err
 		}
-		return defaultCfg, nil
+		return anchorToolPaths(defaultCfg), nil
 	}
 
 	file, err := os.ReadFile(configPath)
@@ -65,7 +66,7 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
-	return &cfg, nil
+	return anchorToolPaths(&cfg), nil
 }
 
 func saveConfig(path string, cfg *Config) error {
@@ -77,23 +78,11 @@ func saveConfig(path string, cfg *Config) error {
 }
 
 func getConfigPath() string {
-	filename := "config.json"
+	return approot.Path("config.json")
+}
 
-	if _, err := os.Stat(filename); err == nil {
-		return filename
-	}
-
-	if _, err := os.Stat("../" + filename); err == nil {
-		return "../" + filename
-	}
-
-	if _, err := os.Stat("go.mod"); err == nil {
-		return filename
-	}
-
-	if _, err := os.Stat("../go.mod"); err == nil {
-		return "../" + filename
-	}
-
-	return filename
+func anchorToolPaths(cfg *Config) *Config {
+	cfg.PlayitPath = approot.Resolve(cfg.PlayitPath)
+	cfg.NgrokPath = approot.Resolve(cfg.NgrokPath)
+	return cfg
 }

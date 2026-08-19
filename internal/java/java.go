@@ -17,11 +17,12 @@ import (
 	"strconv"
 	"strings"
 
+	"minecraft-manager/internal/approot"
 	"minecraft-manager/internal/logx"
 )
 
-// RuntimesRootDir guarda los JDK descargados, al lado de instances/.
-const RuntimesRootDir = "runtimes"
+// RuntimesRootDir guarda los JDK descargados, al lado de instances/
+var RuntimesRootDir = approot.Path("runtimes")
 
 // Requirement es el rango de majors de Java que sirven para una instancia.
 // Min 0 significa que no se pudo determinar y no se valida nada; Max 0 significa
@@ -218,7 +219,7 @@ func wantsDedicated(ask AskLine, candidate string, major int) bool {
 func obtain(ask AskLine, req Requirement) (string, error) {
 	fmt.Printf("\n[?] ¿Cómo conseguir %s?\n", req)
 	if AutoDownloadSupported() {
-		fmt.Printf("  1) Descargarlo automáticamente de Adoptium (queda en %s/)\n", RuntimesRootDir)
+		fmt.Printf("  1) Descargarlo automáticamente de Adoptium (queda en runtimes/)\n")
 	} else {
 		fmt.Printf("  1) (no disponible: la descarga automática no está implementada para %s/%s)\n", runtime.GOOS, runtime.GOARCH)
 	}
