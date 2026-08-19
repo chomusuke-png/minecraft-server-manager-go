@@ -38,7 +38,7 @@ Andá a la sección [Releases](../../releases) de este repositorio y descargá e
 
 ```
 ==========================================================================================
-  MINECRAFT SERVER MANAGER                                                          v1.2.0
+  MINECRAFT SERVER MANAGER                                                          v1.4.0
   por chomusuke-png (Zumito)
 ==========================================================================================
 
