@@ -17,9 +17,15 @@ import (
 	"minecraft-manager/internal/updater"
 )
 
-func runMenuLoop(reader *bufio.Reader, cfg *config.Config) string {
+const (
+	appName     = "MINECRAFT SERVER MANAGER"
+	appAuthor   = "chomusuke-png (Zumito)"
+	headerWidth = 60
+)
+
+func runMenuLoop(reader *bufio.Reader, cfg *config.Config, version string) string {
 	for {
-		selectedInstanceDir, action := selectInstanceFlow(reader, cfg)
+		selectedInstanceDir, action := selectInstanceFlow(reader, cfg, version)
 		if selectedInstanceDir == "" {
 			return ""
 		}
@@ -44,7 +50,7 @@ func runMenuLoop(reader *bufio.Reader, cfg *config.Config) string {
 	}
 }
 
-func selectInstanceFlow(reader *bufio.Reader, cfg *config.Config) (string, string) {
+func selectInstanceFlow(reader *bufio.Reader, cfg *config.Config, version string) (string, string) {
 	instances, err := instance.GetAvailableInstances()
 	if err != nil {
 		logx.Error("Error leyendo instancias: %v", err)
@@ -53,25 +59,9 @@ func selectInstanceFlow(reader *bufio.Reader, cfg *config.Config) (string, strin
 
 	clearScreen()
 
-	fmt.Println("\n" + strings.Repeat("=", 30))
-	fmt.Println("   SELECTOR DE INSTANCIAS")
-	fmt.Println(strings.Repeat("=", 30))
-
-	if len(instances) == 0 {
-		fmt.Println("No hay instancias creadas.")
-	} else {
-		for i, inst := range instances {
-			instDir := filepath.Join(instance.InstancesRootDir, inst)
-			fmt.Printf("%d) %s", i+1, inst)
-			instance.PrintInstanceInfo(instDir)
-			fmt.Println()
-		}
-	}
-
-	fmt.Println("C) crear nueva instancia")
-	fmt.Println("U) actualizar loader de una instancia")
-	fmt.Println("D) borrar una instancia")
-	fmt.Println("Q) salir")
+	printHeader(version)
+	printInstances(instances)
+	printActions()
 
 	result, ok := prompt.Loop(reader, "\n[?] Opción: ", func(input string) (menuChoice, bool, string) {
 		choice := strings.ToUpper(input)
@@ -117,6 +107,50 @@ func selectInstanceFlow(reader *bufio.Reader, cfg *config.Config) (string, strin
 		return "", ""
 	}
 	return result.path, result.action
+}
+
+// printHeader muestra el nombre del proyecto con la version del ejecutable
+// alineada al margen derecho, y el autor debajo
+func printHeader(version string) {
+	if version == "" {
+		version = "dev"
+	}
+
+	line := strings.Repeat("=", headerWidth)
+	title := "  " + appName
+	padding := headerWidth - len(title) - len(version)
+	if padding < 1 {
+		padding = 1
+	}
+
+	fmt.Println("\n" + line)
+	fmt.Printf("%s%s%s\n", title, strings.Repeat(" ", padding), version)
+	fmt.Printf("  por %s\n", appAuthor)
+	fmt.Println(line)
+}
+
+func printInstances(instances []string) {
+	fmt.Println("\n  INSTANCIAS")
+
+	if len(instances) == 0 {
+		fmt.Println("    (no hay instancias creadas)")
+		return
+	}
+
+	for i, inst := range instances {
+		instDir := filepath.Join(instance.InstancesRootDir, inst)
+		fmt.Printf("    %d) %s", i+1, inst)
+		instance.PrintInstanceInfo(instDir)
+		fmt.Println()
+	}
+}
+
+func printActions() {
+	fmt.Println("\n  ACCIONES")
+	fmt.Println("    C) crear nueva instancia")
+	fmt.Println("    U) actualizar loader de una instancia")
+	fmt.Println("    D) borrar una instancia")
+	fmt.Println("    Q) salir")
 }
 
 type menuChoice struct {

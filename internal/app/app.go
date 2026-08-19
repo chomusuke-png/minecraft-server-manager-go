@@ -22,7 +22,7 @@ func Run(cfg *config.Config, version string) {
 	checkForUpdates(reader, cfg, version)
 
 	for {
-		selectedInstanceDir := runMenuLoop(reader, cfg)
+		selectedInstanceDir := runMenuLoop(reader, cfg, version)
 		if selectedInstanceDir == "" {
 			logx.Info("Operación cancelada.")
 			return

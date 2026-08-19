@@ -37,14 +37,19 @@ Andá a la sección [Releases](../../releases) de este repositorio y descargá e
 ## El menú principal
 
 ```
-==============================
-   SELECTOR DE INSTANCIAS
-==============================
-1) mi_server    [paper 1.20.1 | 4GB RAM | puerto 25565]
-C) crear nueva instancia
-U) actualizar loader de una instancia
-D) borrar una instancia
-Q) salir
+============================================================
+  MINECRAFT SERVER MANAGER                            v1.2.0
+  por chomusuke-png (Zumito)
+============================================================
+
+  INSTANCIAS
+    1) mi_server    [paper 1.20.1 | 4GB RAM | puerto 25565]
+
+  ACCIONES
+    C) crear nueva instancia
+    U) actualizar loader de una instancia
+    D) borrar una instancia
+    Q) salir
 ```
 
 - Un número selecciona esa instancia y la arranca.
