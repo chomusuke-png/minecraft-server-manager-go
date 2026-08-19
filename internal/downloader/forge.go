@@ -15,17 +15,11 @@ import (
 
 const forgeInstallerName = "forge-installer.jar"
 
-// forgeLikeSpec agrupa lo que distingue a Forge de NeoForge: mismo instalador
-// (--installServer) y mismo mecanismo de arranque (args file moderno o jar
-// legacy), pero nombre de instalador y ruta de librería distintos.
 type forgeLikeSpec struct {
 	installerName string
-	// libraryGroup es la ruta bajo libraries/ donde el instalador moderno deja
-	// el args file, p.ej. {"net", "minecraftforge", "forge"}.
-	libraryGroup []string
-	// legacyJarPrefix es el prefijo del jar ejecutable que dejan las versiones
-	// pre-1.17 (p.ej. "forge" para forge-<v>.jar). Vacío si el loader no tiene
-	// era legacy: NeoForge solo existe para MC >= 1.20.2, siempre vía args file.
+	libraryGroup  []string
+	// vacio = el loader no tiene era legacy: NeoForge arranca en MC 1.20.2, ya
+	// con args file
 	legacyJarPrefix string
 }
 
@@ -35,18 +29,14 @@ var forgeSpec = forgeLikeSpec{
 	legacyJarPrefix: "forge",
 }
 
-// El args file siempre está bajo un directorio, así que exigir el separador
-// descarta el @user_jvm_args.txt que aparece antes en la misma línea.
+// exigir el separador descarta el @user_jvm_args.txt que aparece antes en la
+// misma linea
 var argsFilePattern = regexp.MustCompile(`@(\S*[/\\](?:win|unix)_args\.txt)`)
 
 func (d *Downloader) installForge(fullVersion string) ([]string, error) {
 	return d.installForgeLike(forgeSpec, fullVersion)
 }
 
-// installForgeLike corre el instalador descargado con --installServer y devuelve
-// los argumentos de arranque que el runner debe usar, o nil si la instalación
-// dejó un server.jar ejecutable y alcanza con el flujo normal. Forge y NeoForge
-// comparten este instalador.
 func (d *Downloader) installForgeLike(spec forgeLikeSpec, fullVersion string) ([]string, error) {
 	logx.Info("Ejecutando el instalador (--installServer)...")
 	logx.Detail("Descarga las librerías del loader; puede tardar varios minutos.")
@@ -73,24 +63,19 @@ func (d *Downloader) resolveForgeLaunch(fullVersion string) ([]string, error) {
 	return d.resolveForgeLikeLaunch(forgeSpec, fullVersion)
 }
 
-// resolveForgeLikeLaunch determina cómo se arranca el servidor recién
-// instalado. Forge (y NeoForge, que hereda el mismo instalador) tienen dos
-// eras y el instalador produce cosas distintas en cada una:
-//
-//   - MC >= 1.17 no deja ningún jar ejecutable. El classpath, el module-path y la
-//     main class viven en libraries/<libraryGroup>/<v>/win_args.txt, que es
-//     exactamente lo que invoca el run.bat generado. Ese archivo es el comando.
-//   - MC <= 1.16.5 (solo Forge; NeoForge no llega tan atrás) sí deja un jar
-//     ejecutable, que renombramos a server.jar para que el flujo normal lo
-//     levante con -jar.
+// resolveForgeLikeLaunch determina como arranca el server recien instalado:
+// desde MC 1.17 el instalador no deja ningun jar y el comando vive en
+// libraries/<libraryGroup>/<v>/win_args.txt, lo mismo que invoca el run.bat
+// generado; hasta MC 1.16.5 (solo Forge) deja un jar ejecutable que se
+// renombra a server.jar para que lo levante el flujo normal
 func (d *Downloader) resolveForgeLikeLaunch(spec forgeLikeSpec, fullVersion string) ([]string, error) {
 	if argsFile := d.findForgeLikeArgsFile(spec, fullVersion); argsFile != "" {
 		logx.Detail("Loader moderno detectado (sin jar ejecutable).")
 		logx.Detail("Comando de arranque: %s", argsFile)
 
 		launchArgs := []string{}
-		// Los instaladores viejos de la era moderna no siempre lo generan, y
-		// pasarlo sin que exista hace fallar a la JVM.
+		// los instaladores viejos de la era moderna no siempre lo generan, y
+		// pasarlo sin que exista hace fallar a la JVM
 		if fileExists(filepath.Join(d.serverDir, "user_jvm_args.txt")) {
 			launchArgs = append(launchArgs, "@user_jvm_args.txt")
 		}
@@ -112,7 +97,7 @@ func (d *Downloader) resolveForgeLikeLaunch(spec forgeLikeSpec, fullVersion stri
 	logx.Detail("Loader legacy detectado: %s", legacyJar)
 
 	target := filepath.Join(d.serverDir, "server.jar")
-	// os.Rename no sobreescribe en Windows.
+	// os.Rename no sobreescribe en Windows
 	if err := os.Remove(target); err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("no se pudo reemplazar el server.jar existente: %w", err)
 	}
@@ -124,15 +109,12 @@ func (d *Downloader) resolveForgeLikeLaunch(spec forgeLikeSpec, fullVersion stri
 	return nil, nil
 }
 
-// findForgeLikeArgsFile devuelve la ruta del args file relativa al directorio de
-// la instancia, o "" si esta versión de este loader no usa ese mecanismo.
 func (d *Downloader) findForgeLikeArgsFile(spec forgeLikeSpec, fullVersion string) string {
 	argsFileName := "unix_args.txt"
 	if runtime.GOOS == "windows" {
 		argsFileName = "win_args.txt"
 	}
 
-	// Ruta canónica: ya conocemos la versión, así que no hace falta buscar.
 	expectedParts := append([]string{"libraries"}, spec.libraryGroup...)
 	expectedParts = append(expectedParts, fullVersion, argsFileName)
 	expected := filepath.ToSlash(filepath.Join(expectedParts...))
@@ -140,12 +122,9 @@ func (d *Downloader) findForgeLikeArgsFile(spec forgeLikeSpec, fullVersion strin
 		return expected
 	}
 
-	// Fallback a prueba de versiones: el loader movió el layout en algunos
-	// builds, y el script generado siempre apunta al args file correcto.
-	// run.bat y run.sh se generan juntos sin importar el SO del host, así que
-	// hay que probar primero el del SO actual: usar el del otro (rutas con '\'
-	// y classpath separado por ';' en vez de '/' y ':') rompería el arranque
-	// aunque el archivo "exista" en disco.
+	// el layout cambio en algunos builds y el script generado siempre apunta
+	// al args file correcto. se prueba primero el del SO actual: el del otro
+	// trae separadores y classpath incompatibles aunque el archivo exista
 	scripts := []string{"run.sh", "run.bat"}
 	if runtime.GOOS == "windows" {
 		scripts = []string{"run.bat", "run.sh"}
@@ -160,14 +139,11 @@ func (d *Downloader) findForgeLikeArgsFile(spec forgeLikeSpec, fullVersion strin
 		if match == nil {
 			continue
 		}
-		// El regex captura la ruta tal como la escribió el script: run.bat usa
-		// '\', run.sh usa '/'. filepath.Clean/ToSlash solo reinterpretan '\'
-		// como separador si el binario corre en Windows, así que se normaliza
-		// a mano antes para que esto funcione en cualquier SO.
+		// run.bat escribe la ruta con separadores de Windows y filepath solo los
+		// interpreta como tales si el binario corre en Windows
 		normalized := strings.ReplaceAll(string(match[1]), `\`, "/")
 		found := filepath.ToSlash(filepath.Clean(normalized))
 		if !strings.HasSuffix(found, argsFileName) {
-			// Este script apunta al args file del otro SO; no sirve acá.
 			continue
 		}
 		if fileExists(filepath.Join(d.serverDir, found)) {
@@ -179,8 +155,6 @@ func (d *Downloader) findForgeLikeArgsFile(spec forgeLikeSpec, fullVersion strin
 	return ""
 }
 
-// findForgeLikeLegacyJar busca el jar ejecutable que dejan los instaladores
-// legacy, cuyo nombre varía entre <prefix>-<v>.jar y <prefix>-<v>-universal.jar.
 func (d *Downloader) findForgeLikeLegacyJar(spec forgeLikeSpec, fullVersion string) string {
 	matches, err := filepath.Glob(filepath.Join(d.serverDir, spec.legacyJarPrefix+"-"+fullVersion+"*.jar"))
 	if err != nil || len(matches) == 0 {
@@ -200,14 +174,12 @@ func (d *Downloader) removeForgeInstaller() {
 	d.removeForgeLikeInstaller(forgeSpec)
 }
 
-// removeForgeLikeInstaller borra el instalador y su log para dejar la
-// instancia limpia. No toca libraries/, user_jvm_args.txt ni
-// minecraft_server.<mc>.jar: el servidor instalado depende de los tres.
+// borra el instalador y su log. no toca libraries/, user_jvm_args.txt ni
+// minecraft_server.<mc>.jar: el servidor instalado depende de los tres
 func (d *Downloader) removeForgeLikeInstaller(spec forgeLikeSpec) {
 	leftovers := []string{
 		spec.installerName,
-		// El instalador escribe "installer.log" a secas, no "<jar>.log": se borran
-		// los dos nombres porque varía entre versiones.
+		// el nombre del log varia entre versiones del instalador
 		"installer.log",
 		spec.installerName + ".log",
 	}
