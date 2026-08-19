@@ -13,8 +13,7 @@ const neoForgeInstallerName = "neoforge-installer.jar"
 
 const neoForgeMavenMetadataURL = "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml"
 
-// NeoForge arranca en MC 1.20.2, ya en la era del args file: nunca tiene jar
-// legacy.
+// NeoForge arranca en MC 1.20.2, ya en la era del args file: nunca tiene jar legacy
 var neoForgeSpec = forgeLikeSpec{
 	installerName:   neoForgeInstallerName,
 	libraryGroup:    []string{"net", "neoforged", "neoforge"},
@@ -22,14 +21,14 @@ var neoForgeSpec = forgeLikeSpec{
 }
 
 func (d *Downloader) DownloadNeoForge(version string) (string, []string, error) {
-	logx.Info("Fetching NeoForge installer for %s...", version)
+	logx.Info("Buscando el instalador de NeoForge para %s...", version)
 
 	neoForgeVersion, err := d.findNeoForgeVersion(version)
 	if err != nil {
 		return "", nil, err
 	}
 
-	logx.Detail("NeoForge Version: %s", neoForgeVersion)
+	logx.Detail("Versión de NeoForge: %s", neoForgeVersion)
 
 	downloadURL := fmt.Sprintf(
 		"https://maven.neoforged.net/releases/net/neoforged/neoforge/%[1]s/neoforge-%[1]s-installer.jar",
@@ -58,13 +57,6 @@ func (d *Downloader) DownloadNeoForge(version string) (string, []string, error) 
 	return neoForgeVersion, launchArgs, nil
 }
 
-// findNeoForgeVersion resuelve la versión de NeoForge para una versión de
-// Minecraft dada. A diferencia de Forge, NeoForge no publica un mapeo
-// mc -> recomendada: solo la lista plana de versiones de maven-metadata.xml,
-// en orden de publicación. Cada versión arranca con "<minorMC>.<patchMC>."
-// (1.21.1 -> "21.1.", 1.21 -> "21.0."), así que se filtra por ese prefijo y
-// se toma el último match (el más reciente), prefiriendo estable sobre
-// pre-release si hay ambos.
 func (d *Downloader) findNeoForgeVersion(mcVersion string) (string, error) {
 	prefix, ok := neoForgeVersionPrefix(mcVersion)
 	if !ok {

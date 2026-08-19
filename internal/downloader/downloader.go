@@ -40,14 +40,14 @@ func (d *Downloader) DownloadFile(url string, filename string) error {
 
 func (d *Downloader) DownloadFileVerified(url, filename, algo, expectedHex string) error {
 	if err := os.MkdirAll(d.serverDir, 0755); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
+		return fmt.Errorf("error creando el directorio: %w", err)
 	}
 
 	return httpx.DownloadVerified(url, filepath.Join(d.serverDir, filename), algo, expectedHex)
 }
 
 func (d *Downloader) DownloadPaper(version string) (string, error) {
-	logx.Info("Searching latest Paper build for %s...", version)
+	logx.Info("Buscando la última build de Paper para %s...", version)
 
 	paperAPIBaseURL := fmt.Sprintf("https://api.papermc.io/v2/projects/paper/versions/%s", version)
 
@@ -57,7 +57,7 @@ func (d *Downloader) DownloadPaper(version string) (string, error) {
 	}
 
 	if len(data.Builds) == 0 {
-		return "", fmt.Errorf("no builds found for version %s", version)
+		return "", fmt.Errorf("no se encontraron builds para la versión %s", version)
 	}
 
 	latestBuild := data.Builds[len(data.Builds)-1]
@@ -81,11 +81,11 @@ func (d *Downloader) DownloadPaper(version string) (string, error) {
 }
 
 func (d *Downloader) DownloadFabric(version string) (string, error) {
-	logx.Info("Fetching Fabric installer for %s...", version)
+	logx.Info("Buscando el instalador de Fabric para %s...", version)
 
 	var loaders []FabricLoader
 	if err := getJSON("https://meta.fabricmc.net/v2/versions/loader", &loaders); err != nil {
-		return "", fmt.Errorf("error fetching loaders: %w", err)
+		return "", fmt.Errorf("error obteniendo los loaders de Fabric: %w", err)
 	}
 
 	loaderVersion := ""
@@ -101,7 +101,7 @@ func (d *Downloader) DownloadFabric(version string) (string, error) {
 
 	var installers []FabricInstaller
 	if err := getJSON("https://meta.fabricmc.net/v2/versions/installer", &installers); err != nil {
-		return "", fmt.Errorf("error fetching installers: %w", err)
+		return "", fmt.Errorf("error obteniendo los instaladores de Fabric: %w", err)
 	}
 
 	installerVersion := ""
@@ -115,7 +115,7 @@ func (d *Downloader) DownloadFabric(version string) (string, error) {
 		installerVersion = "1.0.0"
 	}
 
-	logx.Detail("Loader: %s | Installer: %s", loaderVersion, installerVersion)
+	logx.Detail("Loader: %s | Instalador: %s", loaderVersion, installerVersion)
 
 	jarDownloadURL := fmt.Sprintf(
 		"https://meta.fabricmc.net/v2/versions/loader/%s/%s/%s/server/jar",
@@ -129,11 +129,11 @@ func (d *Downloader) DownloadFabric(version string) (string, error) {
 }
 
 func (d *Downloader) DownloadForge(version string) (string, []string, error) {
-	logx.Info("Fetching Forge installer for %s...", version)
+	logx.Info("Buscando el instalador de Forge para %s...", version)
 
 	var promos ForgePromotions
 	if err := getJSON("https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json", &promos); err != nil {
-		return "", nil, fmt.Errorf("error fetching Forge promotions: %w", err)
+		return "", nil, fmt.Errorf("error obteniendo las versiones publicadas de Forge: %w", err)
 	}
 
 	forgeVersion := promos.Promos[version+"-latest"]
@@ -142,10 +142,10 @@ func (d *Downloader) DownloadForge(version string) (string, []string, error) {
 	}
 
 	if forgeVersion == "" {
-		return "", nil, fmt.Errorf("no Forge version found for Minecraft %s", version)
+		return "", nil, fmt.Errorf("no se encontró una versión de Forge para Minecraft %s", version)
 	}
 
-	logx.Detail("Forge Version: %s", forgeVersion)
+	logx.Detail("Versión de Forge: %s", forgeVersion)
 
 	fullVersion := fmt.Sprintf("%s-%s", version, forgeVersion)
 
@@ -193,7 +193,7 @@ func (d *Downloader) DownloadVanilla(version string) (string, error) {
 	}
 
 	if versionDetailsURL == "" {
-		return "", fmt.Errorf("version %s not found in Mojang manifest", version)
+		return "", fmt.Errorf("la versión %s no figura en el manifest de Mojang", version)
 	}
 
 	var details MojangVersionDetails
@@ -203,7 +203,7 @@ func (d *Downloader) DownloadVanilla(version string) (string, error) {
 
 	serverJarURL := details.Downloads.Server.URL
 	if serverJarURL == "" {
-		return "", fmt.Errorf("no server download available for %s", version)
+		return "", fmt.Errorf("no hay descarga de servidor disponible para %s", version)
 	}
 
 	if err := d.DownloadFileVerified(serverJarURL, "server.jar", "sha1", details.Downloads.Server.SHA1); err != nil {
@@ -238,7 +238,7 @@ func (d *Downloader) DownloadPlayit(playitPath string) error {
 		return err
 	}
 
-	logx.Info("Downloading Playit.gg Agent...")
+	logx.Info("Descargando el agente de Playit.gg...")
 	url := fmt.Sprintf(
 		"https://github.com/playit-cloud/playit-agent/releases/download/%s/%s",
 		playitPinnedVersion, assetName,
@@ -246,7 +246,7 @@ func (d *Downloader) DownloadPlayit(playitPath string) error {
 
 	if dir := filepath.Dir(playitPath); dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory: %w", err)
+			return fmt.Errorf("error creando el directorio: %w", err)
 		}
 	}
 
@@ -296,11 +296,7 @@ func fetchPlayitSHA256(assetName string) (string, error) {
 }
 
 func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
-	fmt.Println("\n" + strings.Repeat("=", 40))
-	fmt.Println("   AUTOMATIC INSTALLATION SELECTOR")
-	fmt.Println(strings.Repeat("=", 40))
-
-	version, ok := prompt.Loop(reader, "[?] Enter Minecraft version (e.g., 1.20.1): ", func(input string) (string, bool, string) {
+	version, ok := prompt.Loop(reader, "[?] Introduzca la versión de Minecraft a descargar (e.g., 1.20.1): ", func(input string) (string, bool, string) {
 		if input == "" {
 			return "", false, "Entrada incorrecta, reintente."
 		}
@@ -311,15 +307,15 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 		return nil
 	}
 
-	fmt.Printf("\nSelect server type for %s:\n", version)
+	fmt.Printf("\nTipo de servidor para %s:\n", version)
 	fmt.Println("1) Paper")
 	fmt.Println("2) Fabric")
 	fmt.Println("3) Forge")
 	fmt.Println("4) NeoForge")
 	fmt.Println("5) Vanilla")
-	fmt.Println("6) Cancel")
+	fmt.Println("6) Cancelar")
 
-	choice, ok := prompt.Loop(reader, "\n[?] Option [1-6]: ", func(input string) (string, bool, string) {
+	choice, ok := prompt.Loop(reader, "\n[?] Opción [1-6]: ", func(input string) (string, bool, string) {
 		switch input {
 		case "1", "2", "3", "4", "5", "6":
 			return input, true, ""
@@ -334,7 +330,7 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 	loaderTypes := map[string]string{"1": "paper", "2": "fabric", "3": "forge", "4": "neoforge", "5": "vanilla"}
 	loaderType, isLoader := loaderTypes[choice]
 	if !isLoader {
-		logx.Info("Cancelled.")
+		logx.Info("Cancelado.")
 		return nil
 	}
 
@@ -361,14 +357,14 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 	}
 
 	if err != nil {
-		logx.Error("\nError installing server: %v", err)
+		logx.Error("\nError instalando el servidor: %v", err)
 		return nil
 	}
 
 	if len(launchArgs) > 0 {
-		logx.Success("Success! %s %s installed (arranca vía args file, sin server.jar).", loaderType, version)
+		logx.Success("%s %s instalado (arranca vía args file, sin server.jar).", loaderType, version)
 	} else {
-		logx.Success("Success! 'server.jar' installed for version %s.", version)
+		logx.Success("'server.jar' instalado para la versión %s.", version)
 	}
 
 	return &DownloadResult{
