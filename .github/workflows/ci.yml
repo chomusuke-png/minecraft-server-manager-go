@@ -7,8 +7,12 @@ on:
 
 jobs:
   test:
-    name: Tests y análisis
-    runs-on: ubuntu-latest
+    name: Tests y análisis (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
 
@@ -16,7 +20,10 @@ jobs:
         with:
           go-version-file: go.mod
 
+      # gofmt no depende del SO, con correrlo en linux alcanza. en windows el
+      # checkout puede traer CRLF y marcaria todos los archivos como sin formatear
       - name: Formato
+        if: runner.os == 'Linux'
         run: |
           sin_formato=$(gofmt -l .)
           if [ -n "$sin_formato" ]; then

@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -23,6 +24,12 @@ func buildTarGz(t *testing.T, path string, entries func(tw *tar.Writer)) {
 }
 
 func TestUntarGzExtractsFileAndSymlinkWithMode(t *testing.T) {
+	// windows baja el JDK en .zip y nunca pasa por untarGz, asi que no tiene
+	// sentido exigirle ni los permisos de ejecucion ni los symlinks del tar
+	if runtime.GOOS == "windows" {
+		t.Skip("untarGz solo se usa en linux y macos")
+	}
+
 	dir := t.TempDir()
 	archivePath := filepath.Join(dir, "jdk.tar.gz")
 	destination := filepath.Join(dir, "out")
