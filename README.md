@@ -46,9 +46,10 @@ Andá a la sección [Releases](../../releases) de este repositorio y descargá e
 ==========================================================================================
 
   INSTANCIAS
-       NOMBRE             LOADER    VERSION  RAM  PUERTO  TUNEL
-    1) mi_server          paper     1.20.1   4GB  25565   playit
-    2) survival-hardcore  fabric    1.21.1   6GB  25570   ngrok
+       NOMBRE             MINECRAFT  LOADER    VERSION   RAM  PUERTO  TUNEL
+    1) mi_server          1.20.1     paper     133       4GB  25565   playit
+    2) survival-hardcore  1.21.1     fabric    0.19.3    6GB  25570   ngrok
+    3) puro-vanilla       1.21.8     vanilla   -         4GB  25580   playit
 
   ACCIONES
     C) crear nueva instancia

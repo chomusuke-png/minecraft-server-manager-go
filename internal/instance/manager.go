@@ -114,7 +114,7 @@ func DeleteInstance(reader *bufio.Reader, instancePath string) error {
 }
 
 // instanceColumns son los encabezados de la tabla de instancias del menu
-var instanceColumns = []string{"NOMBRE", "LOADER", "VERSION", "RAM", "PUERTO", "TUNEL"}
+var instanceColumns = []string{"NOMBRE", "MINECRAFT", "LOADER", "VERSION", "RAM", "PUERTO", "TUNEL"}
 
 // FormatInstanceTable arma la tabla de instancias
 func FormatInstanceTable(names []string) (string, []string) {
@@ -146,7 +146,7 @@ func FormatInstanceTable(names []string) (string, []string) {
 // columna, con "-" en los que todavia no existen
 func instanceCells(name string) []string {
 	instanceDir := filepath.Join(InstancesRootDir, name)
-	loader, version, ram, tunnel := "-", "-", "-", "-"
+	loader, version, loaderVersion, ram, tunnel := "-", "-", "-", "-", "-"
 
 	if meta, err := LoadMeta(instanceDir); err == nil {
 		if meta.LoaderType != "" {
@@ -154,6 +154,11 @@ func instanceCells(name string) []string {
 		}
 		if meta.MCVersion != "" {
 			version = meta.MCVersion
+		}
+		// vanilla no tiene version propia, y las instancias viejas se crearon
+		// antes de que se guardara
+		if meta.LoaderVersion != "" {
+			loaderVersion = meta.LoaderVersion
 		}
 		if meta.RAMGB > 0 {
 			ram = fmt.Sprintf("%dGB", meta.RAMGB)
@@ -170,7 +175,7 @@ func instanceCells(name string) []string {
 		port = strconv.Itoa(value)
 	}
 
-	return []string{name, loader, version, ram, port, tunnel}
+	return []string{name, version, loader, loaderVersion, ram, port, tunnel}
 }
 
 // joinColumns pega los valores de una fila rellenando cada uno hasta el ancho
