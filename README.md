@@ -30,6 +30,7 @@ Andá a la sección [Releases](../../releases) de este repositorio y descargá e
 4. Como todavía no tiene el jar del servidor, te pregunta si querés descargarlo automáticamente. Si decís que sí:
    - Versión de Minecraft (ej. `1.20.1`).
    - Tipo de servidor: **Paper**, **Fabric**, **Forge**, **NeoForge** o **Vanilla**.
+   - Versión del loader: se consulta qué hay publicado para esa versión de Minecraft y podés elegir la **más reciente**, la **estable** o escribir una en particular. Vanilla no pregunta nada porque no tiene versión propia. Qué significa cada opción según el loader: en Paper es el número de build (estable = canal `default`), en Fabric la versión del loader (el instalador siempre es el estable), en Forge lo que publica como `latest` y `recommended`, y en NeoForge la última del maven contra la última sin `-beta`/`-alpha`.
    - Si el Java que tenés no es compatible con esa versión, te ofrece conseguir uno (descarga automática de [Adoptium](https://adoptium.net/) o indicar la ruta a un Java que ya tengas instalado).
 5. Configurás `server.properties` la primera vez: MOTD, dificultad, tipo de mundo (normal, plano, biomas grandes o amplificado), jugadores máximos, `online-mode` y **puerto**. Todo con Enter para aceptar el valor por defecto que se muestra entre corchetes.
 6. Si la instancia usa un túnel (o aceptaste descargarlo), se lanza. Con Playit, en Windows en su propia ventana y en Linux en la misma consola (logueado en `playit.log`). Con ngrok, la URL pública se imprime en consola y queda en `ngrok.log` dentro de la instancia.
@@ -58,7 +59,7 @@ Andá a la sección [Releases](../../releases) de este repositorio y descargá e
 
 - Un número selecciona esa instancia y la arranca.
 - `C` crea una instancia nueva.
-- `U` te deja elegir una instancia existente y cambiarle la versión de Minecraft, el tipo de loader, la RAM, el puerto, el túnel y el mínimo de backups a conservar, sin tener que borrarla y crearla de nuevo.
+- `U` te deja elegir una instancia existente y cambiarle la versión de Minecraft, el tipo de loader, la versión del loader, la RAM, el puerto, el túnel y el mínimo de backups a conservar, sin tener que borrarla y crearla de nuevo. En el menú de versión del loader aparece primero `Mantener la actual`, que es lo que toma si apretás Enter; sólo se ofrece si no cambiaste ni el loader ni la versión de Minecraft, porque en ese caso la versión vieja ya no aplica.
 - `D` te deja elegir una instancia y borrarla por completo (mundo, backups, todo). Pide escribir el nombre exacto para confirmar; cualquier otra cosa (o Enter en blanco) cancela sin tocar nada.
 - `Q` sale del programa.
 

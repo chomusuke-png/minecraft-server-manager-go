@@ -2,6 +2,7 @@ package downloader
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"minecraft-manager/internal/httpx"
 	"minecraft-manager/internal/java"
@@ -10,13 +11,16 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 )
 
 const (
 	paperVersionsURL    = "https://fill.papermc.io/v3/projects/paper/versions"
+	paperStableChannel  = "STABLE"
 	paperServerDownload = "server:default"
+	fabricLoadersURL    = "https://meta.fabricmc.net/v2/versions/loader"
+	fabricInstallersURL = "https://meta.fabricmc.net/v2/versions/installer"
+	forgePromotionsURL  = "https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json"
 )
 
 func paperBuildsURL(mcVersion string) string {
@@ -55,53 +59,30 @@ func (d *Downloader) DownloadFileVerified(url, filename, algo, expectedHex strin
 	return httpx.DownloadVerified(url, filepath.Join(d.serverDir, filename), algo, expectedHex)
 }
 
-func (d *Downloader) DownloadPaper(version string) (string, error) {
-	logx.Info("Buscando la última build de Paper para %s...", version)
+func (d *Downloader) DownloadPaper(version string, build string) (string, error) {
+	logx.Info("Descargando la build %s de Paper para %s...", build, version)
 
-	var builds []PaperBuild
-	if err := getJSON(paperBuildsURL(version), &builds); err != nil {
-		return "", fmt.Errorf("error obteniendo las builds de Paper: %w", err)
+	var details PaperBuild
+	if err := getJSON(fmt.Sprintf("%s/%s", paperBuildsURL(version), build), &details); err != nil {
+		return "", fmt.Errorf("error obteniendo detalles del build %s: %w", build, err)
 	}
 
-	if len(builds) == 0 {
-		return "", fmt.Errorf("no se encontraron builds para la versión %s", version)
-	}
-
-	// la v3 devuelve la lista de la mas nueva a la mas vieja
-	latestBuild := builds[0]
-
-	download, ok := latestBuild.Downloads[paperServerDownload]
+	download, ok := details.Downloads[paperServerDownload]
 	if !ok || download.URL == "" {
-		return "", fmt.Errorf("la build %d de Paper no publica un jar de servidor", latestBuild.ID)
+		return "", fmt.Errorf("la build %s de Paper no publica un jar de servidor", build)
 	}
 
 	if err := d.DownloadFileVerified(download.URL, "server.jar", "sha256", download.Checksums["sha256"]); err != nil {
 		return "", err
 	}
-	return strconv.Itoa(latestBuild.ID), nil
+	return build, nil
 }
 
-func (d *Downloader) DownloadFabric(version string) (string, error) {
+func (d *Downloader) DownloadFabric(version string, loaderVersion string) (string, error) {
 	logx.Info("Buscando el instalador de Fabric para %s...", version)
 
-	var loaders []FabricLoader
-	if err := getJSON("https://meta.fabricmc.net/v2/versions/loader", &loaders); err != nil {
-		return "", fmt.Errorf("error obteniendo los loaders de Fabric: %w", err)
-	}
-
-	loaderVersion := ""
-	for _, loader := range loaders {
-		if loader.Stable {
-			loaderVersion = loader.Version
-			break
-		}
-	}
-	if loaderVersion == "" {
-		loaderVersion = "0.15.7"
-	}
-
 	var installers []FabricInstaller
-	if err := getJSON("https://meta.fabricmc.net/v2/versions/installer", &installers); err != nil {
+	if err := getJSON(fabricInstallersURL, &installers); err != nil {
 		return "", fmt.Errorf("error obteniendo los instaladores de Fabric: %w", err)
 	}
 
@@ -129,24 +110,8 @@ func (d *Downloader) DownloadFabric(version string) (string, error) {
 	return loaderVersion, nil
 }
 
-func (d *Downloader) DownloadForge(version string) (string, []string, error) {
-	logx.Info("Buscando el instalador de Forge para %s...", version)
-
-	var promos ForgePromotions
-	if err := getJSON("https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json", &promos); err != nil {
-		return "", nil, fmt.Errorf("error obteniendo las versiones publicadas de Forge: %w", err)
-	}
-
-	forgeVersion := promos.Promos[version+"-latest"]
-	if forgeVersion == "" {
-		forgeVersion = promos.Promos[version+"-recommended"]
-	}
-
-	if forgeVersion == "" {
-		return "", nil, fmt.Errorf("no se encontró una versión de Forge para Minecraft %s", version)
-	}
-
-	logx.Detail("Versión de Forge: %s", forgeVersion)
+func (d *Downloader) DownloadForge(version string, forgeVersion string) (string, []string, error) {
+	logx.Info("Buscando el instalador de Forge %s para %s...", forgeVersion, version)
 
 	fullVersion := fmt.Sprintf("%s-%s", version, forgeVersion)
 
@@ -165,7 +130,7 @@ func (d *Downloader) DownloadForge(version string) (string, []string, error) {
 	}
 
 	if err := d.DownloadFileVerified(downloadURL, forgeInstallerName, "sha1", sha1Hex); err != nil {
-		return "", nil, err
+		return "", nil, fmt.Errorf("no se pudo descargar el instalador de Forge %s (¿existe esa versión para Minecraft %s?): %w", forgeVersion, version, err)
 	}
 
 	launchArgs, err := d.installForge(fullVersion)
@@ -335,28 +300,22 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 		return nil
 	}
 
+	chosenVersion, err := ChooseLoaderVersion(reader, loaderType, version, "")
+	if err != nil {
+		if errors.Is(err, ErrCancelled) {
+			logx.Info("Cancelado.")
+		} else {
+			logx.Error("\n%v", err)
+		}
+		return nil
+	}
+
 	if err := d.resolveJava(reader, loaderType, version); err != nil {
 		logx.Error("\n%v", err)
 		return nil
 	}
 
-	var err error
-	var loaderVersion string
-	var launchArgs []string
-
-	switch loaderType {
-	case "paper":
-		loaderVersion, err = d.DownloadPaper(version)
-	case "fabric":
-		loaderVersion, err = d.DownloadFabric(version)
-	case "forge":
-		loaderVersion, launchArgs, err = d.DownloadForge(version)
-	case "neoforge":
-		loaderVersion, launchArgs, err = d.DownloadNeoForge(version)
-	case "vanilla":
-		loaderVersion, err = d.DownloadVanilla(version)
-	}
-
+	loaderVersion, launchArgs, err := d.Install(loaderType, version, chosenVersion)
 	if err != nil {
 		logx.Error("\nError instalando el servidor: %v", err)
 		return nil

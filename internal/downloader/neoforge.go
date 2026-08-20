@@ -20,15 +20,8 @@ var neoForgeSpec = forgeLikeSpec{
 	legacyJarPrefix: "",
 }
 
-func (d *Downloader) DownloadNeoForge(version string) (string, []string, error) {
-	logx.Info("Buscando el instalador de NeoForge para %s...", version)
-
-	neoForgeVersion, err := d.findNeoForgeVersion(version)
-	if err != nil {
-		return "", nil, err
-	}
-
-	logx.Detail("Versión de NeoForge: %s", neoForgeVersion)
+func (d *Downloader) DownloadNeoForge(version string, neoForgeVersion string) (string, []string, error) {
+	logx.Info("Buscando el instalador de NeoForge %s para %s...", neoForgeVersion, version)
 
 	downloadURL := fmt.Sprintf(
 		"https://maven.neoforged.net/releases/net/neoforged/neoforge/%[1]s/neoforge-%[1]s-installer.jar",
@@ -55,39 +48,6 @@ func (d *Downloader) DownloadNeoForge(version string) (string, []string, error) 
 	}
 
 	return neoForgeVersion, launchArgs, nil
-}
-
-func (d *Downloader) findNeoForgeVersion(mcVersion string) (string, error) {
-	prefix, ok := neoForgeVersionPrefix(mcVersion)
-	if !ok {
-		return "", fmt.Errorf("no se pudo interpretar la versión de Minecraft '%s'", mcVersion)
-	}
-
-	var metadata NeoForgeMavenMetadata
-	if err := httpx.GetXML(neoForgeMavenMetadataURL, &metadata); err != nil {
-		return "", fmt.Errorf("error obteniendo versiones de NeoForge: %w", err)
-	}
-
-	stable, prerelease := "", ""
-	for _, version := range metadata.Versioning.Versions.Version {
-		if !strings.HasPrefix(version, prefix) {
-			continue
-		}
-		if strings.Contains(version, "-beta") || strings.Contains(version, "-alpha") {
-			prerelease = version
-		} else {
-			stable = version
-		}
-	}
-
-	if stable != "" {
-		return stable, nil
-	}
-	if prerelease != "" {
-		logx.Warn("Solo hay builds pre-release de NeoForge para Minecraft %s, se usa %s.", mcVersion, prerelease)
-		return prerelease, nil
-	}
-	return "", fmt.Errorf("no se encontró ninguna versión de NeoForge para Minecraft %s", mcVersion)
 }
 
 // neoForgeVersionPrefix deriva el prefijo "<minor>.<patch>." que usan las

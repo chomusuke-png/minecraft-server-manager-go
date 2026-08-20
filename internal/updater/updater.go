@@ -2,6 +2,7 @@ package updater
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"minecraft-manager/internal/downloader"
 	"minecraft-manager/internal/instance"
@@ -42,6 +43,22 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader, javaPath string) err
 
 	newLoaderType := promptLoaderType(reader, meta.LoaderType)
 
+	// la version que ya tiene solo sigue siendo valida si no cambio ni el loader
+	// ni la version de Minecraft
+	currentLoaderVersion := ""
+	if newLoaderType == meta.LoaderType && newVersion == meta.MCVersion {
+		currentLoaderVersion = meta.LoaderVersion
+	}
+
+	chosenLoaderVersion, err := downloader.ChooseLoaderVersion(reader, newLoaderType, newVersion, currentLoaderVersion)
+	if err != nil {
+		if errors.Is(err, downloader.ErrCancelled) {
+			logx.Info("Actualización cancelada.")
+			return nil
+		}
+		return err
+	}
+
 	updatedRAMGB := instance.PromptRAMUpdate(reader, meta.RAMGB)
 	updatedBackupKeepMin := instance.PromptBackupKeepMinUpdate(reader, meta.BackupKeepMin)
 	updatedTunnelProvider := instance.PromptTunnelProviderUpdate(reader, meta.TunnelProvider)
@@ -54,23 +71,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader, javaPath string) err
 	serverDownloader := downloader.New(instanceDir, resolvedJava)
 
 	logx.Info("Descargando %s %s...", newLoaderType, newVersion)
-	var newLoaderVersion string
-	var newLaunchArgs []string
-	switch newLoaderType {
-	case "paper":
-		newLoaderVersion, err = serverDownloader.DownloadPaper(newVersion)
-	case "fabric":
-		newLoaderVersion, err = serverDownloader.DownloadFabric(newVersion)
-	case "forge":
-		newLoaderVersion, newLaunchArgs, err = serverDownloader.DownloadForge(newVersion)
-	case "neoforge":
-		newLoaderVersion, newLaunchArgs, err = serverDownloader.DownloadNeoForge(newVersion)
-	case "vanilla":
-		newLoaderVersion, err = serverDownloader.DownloadVanilla(newVersion)
-	default:
-		return fmt.Errorf("tipo de loader desconocido: %s", newLoaderType)
-	}
-
+	newLoaderVersion, newLaunchArgs, err := serverDownloader.Install(newLoaderType, newVersion, chosenLoaderVersion)
 	if err != nil {
 		return fmt.Errorf("error descargando: %w", err)
 	}
