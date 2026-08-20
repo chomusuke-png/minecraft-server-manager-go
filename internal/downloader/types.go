@@ -18,20 +18,18 @@ type MojangVersionDetails struct {
 	} `json:"downloads"`
 }
 
-type PaperBuildsResponse struct {
-	Builds []int `json:"builds"`
+// PaperBuild es una build en la API v3 de Paper, que devuelve la lista de la
+// mas nueva a la mas vieja y trae el canal y la descarga en la misma respuesta
+type PaperBuild struct {
+	ID        int                      `json:"id"`
+	Channel   string                   `json:"channel"`
+	Downloads map[string]PaperDownload `json:"downloads"`
 }
 
-// PaperBuildDetails es la respuesta de /builds/{build}, que trae el nombre real
-// del jar y su sha256. El endpoint de versión (PaperBuildsResponse) solo da
-// números de build, sin esto.
-type PaperBuildDetails struct {
-	Downloads struct {
-		Application struct {
-			Name   string `json:"name"`
-			SHA256 string `json:"sha256"`
-		} `json:"application"`
-	} `json:"downloads"`
+type PaperDownload struct {
+	Name      string            `json:"name"`
+	URL       string            `json:"url"`
+	Checksums map[string]string `json:"checksums"`
 }
 
 type FabricLoader struct {

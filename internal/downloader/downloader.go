@@ -14,6 +14,15 @@ import (
 	"strings"
 )
 
+const (
+	paperVersionsURL    = "https://fill.papermc.io/v3/projects/paper/versions"
+	paperServerDownload = "server:default"
+)
+
+func paperBuildsURL(mcVersion string) string {
+	return fmt.Sprintf("%s/%s/builds", paperVersionsURL, mcVersion)
+}
+
 type Downloader struct {
 	serverDir string
 	javaPath  string
@@ -49,35 +58,27 @@ func (d *Downloader) DownloadFileVerified(url, filename, algo, expectedHex strin
 func (d *Downloader) DownloadPaper(version string) (string, error) {
 	logx.Info("Buscando la última build de Paper para %s...", version)
 
-	paperAPIBaseURL := fmt.Sprintf("https://api.papermc.io/v2/projects/paper/versions/%s", version)
-
-	var data PaperBuildsResponse
-	if err := getJSON(paperAPIBaseURL, &data); err != nil {
-		return "", err
+	var builds []PaperBuild
+	if err := getJSON(paperBuildsURL(version), &builds); err != nil {
+		return "", fmt.Errorf("error obteniendo las builds de Paper: %w", err)
 	}
 
-	if len(data.Builds) == 0 {
+	if len(builds) == 0 {
 		return "", fmt.Errorf("no se encontraron builds para la versión %s", version)
 	}
 
-	latestBuild := data.Builds[len(data.Builds)-1]
+	// la v3 devuelve la lista de la mas nueva a la mas vieja
+	latestBuild := builds[0]
 
-	buildDetailsURL := fmt.Sprintf("%s/builds/%d", paperAPIBaseURL, latestBuild)
-	var buildDetails PaperBuildDetails
-	if err := getJSON(buildDetailsURL, &buildDetails); err != nil {
-		return "", fmt.Errorf("error obteniendo detalles del build %d: %w", latestBuild, err)
+	download, ok := latestBuild.Downloads[paperServerDownload]
+	if !ok || download.URL == "" {
+		return "", fmt.Errorf("la build %d de Paper no publica un jar de servidor", latestBuild.ID)
 	}
 
-	jarFileName := buildDetails.Downloads.Application.Name
-	if jarFileName == "" {
-		jarFileName = fmt.Sprintf("paper-%s-%d.jar", version, latestBuild)
-	}
-	jarDownloadURL := fmt.Sprintf("%s/downloads/%s", buildDetailsURL, jarFileName)
-
-	if err := d.DownloadFileVerified(jarDownloadURL, "server.jar", "sha256", buildDetails.Downloads.Application.SHA256); err != nil {
+	if err := d.DownloadFileVerified(download.URL, "server.jar", "sha256", download.Checksums["sha256"]); err != nil {
 		return "", err
 	}
-	return strconv.Itoa(latestBuild), nil
+	return strconv.Itoa(latestBuild.ID), nil
 }
 
 func (d *Downloader) DownloadFabric(version string) (string, error) {
