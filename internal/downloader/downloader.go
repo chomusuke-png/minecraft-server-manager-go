@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -273,18 +274,19 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 		return nil
 	}
 
-	fmt.Printf("\n[?] Tipo de servidor para %s:\n", version)
-	fmt.Println("  1) Paper")
-	fmt.Println("  2) Fabric")
-	fmt.Println("  3) Forge")
-	fmt.Println("  4) NeoForge")
-	fmt.Println("  5) Vanilla")
-	fmt.Println("  6) Cancelar")
+	cancelOption := len(Loaders) + 1
 
-	choice, ok := prompt.Loop(reader, "\n[?] Opción [1-6]: ", func(input string) (string, bool, string) {
-		switch input {
-		case "1", "2", "3", "4", "5", "6":
-			return input, true, ""
+	fmt.Printf("\n[?] Tipo de servidor para %s:\n", version)
+	PrintLoaderOptions("  ")
+	fmt.Printf("  %d) Cancelar\n", cancelOption)
+
+	promptText := fmt.Sprintf("\n[?] Opción [1-%d]: ", cancelOption)
+	loaderType, ok := prompt.Loop(reader, promptText, func(input string) (string, bool, string) {
+		if input == strconv.Itoa(cancelOption) {
+			return "", true, ""
+		}
+		if loader, isLoader := LoaderByChoice(input); isLoader {
+			return loader, true, ""
 		}
 		return "", false, "Entrada incorrecta, reintente."
 	})
@@ -292,10 +294,7 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 		logx.Error("\nNo se pudo leer la entrada. Cancelado.")
 		return nil
 	}
-
-	loaderTypes := map[string]string{"1": "paper", "2": "fabric", "3": "forge", "4": "neoforge", "5": "vanilla"}
-	loaderType, isLoader := loaderTypes[choice]
-	if !isLoader {
+	if loaderType == "" {
 		logx.Info("Cancelado.")
 		return nil
 	}

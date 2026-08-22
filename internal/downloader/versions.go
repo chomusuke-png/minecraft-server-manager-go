@@ -15,14 +15,6 @@ import (
 
 var ErrCancelled = errors.New("descarga cancelada")
 
-var loaderLabels = map[string]string{
-	"paper":    "Paper",
-	"fabric":   "Fabric",
-	"forge":    "Forge",
-	"neoforge": "NeoForge",
-	"vanilla":  "Vanilla",
-}
-
 type loaderVersions struct {
 	latest string
 	stable string
@@ -54,7 +46,7 @@ func ChooseLoaderVersion(reader *bufio.Reader, loaderType, mcVersion, current st
 		return "", nil
 	}
 
-	label, ok := loaderLabels[loaderType]
+	label, ok := LoaderLabel(loaderType)
 	if !ok {
 		return "", fmt.Errorf("tipo de loader desconocido: %s", loaderType)
 	}
@@ -68,18 +60,21 @@ func ChooseLoaderVersion(reader *bufio.Reader, loaderType, mcVersion, current st
 	return promptLoaderVersion(reader, label, available, current)
 }
 
+// loaderVersionResolvers tiene una entrada por cada loader con version propia,
+// o sea todos menos vanilla
+var loaderVersionResolvers = map[string]func(mcVersion string) (loaderVersions, error){
+	"paper":    paperVersions,
+	"fabric":   func(string) (loaderVersions, error) { return fabricVersions() },
+	"forge":    forgeVersions,
+	"neoforge": neoForgeVersions,
+}
+
 func resolveLoaderVersions(loaderType, mcVersion string) (loaderVersions, error) {
-	switch loaderType {
-	case "paper":
-		return paperVersions(mcVersion)
-	case "fabric":
-		return fabricVersions()
-	case "forge":
-		return forgeVersions(mcVersion)
-	case "neoforge":
-		return neoForgeVersions(mcVersion)
+	resolver, ok := loaderVersionResolvers[loaderType]
+	if !ok {
+		return loaderVersions{}, fmt.Errorf("tipo de loader desconocido: %s", loaderType)
 	}
-	return loaderVersions{}, fmt.Errorf("tipo de loader desconocido: %s", loaderType)
+	return resolver(mcVersion)
 }
 
 func paperVersions(mcVersion string) (loaderVersions, error) {

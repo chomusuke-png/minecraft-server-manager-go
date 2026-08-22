@@ -105,24 +105,11 @@ func preferredJava(meta *instance.InstanceMeta, globalJavaPath string) string {
 
 func promptLoaderType(reader *bufio.Reader, current string) string {
 	fmt.Printf("\n[?] Tipo de loader (Enter para mantener '%s'):\n", current)
-	fmt.Println("  1) Paper")
-	fmt.Println("  2) Fabric")
-	fmt.Println("  3) Forge")
-	fmt.Println("  4) NeoForge")
-	fmt.Println("  5) Vanilla")
+	downloader.PrintLoaderOptions("  ")
 
 	return prompt.LoopDefault(reader, "\n[?] Opción (Enter para mantener actual): ", current, func(input string) (string, bool, string) {
-		switch input {
-		case "1":
-			return "paper", true, ""
-		case "2":
-			return "fabric", true, ""
-		case "3":
-			return "forge", true, ""
-		case "4":
-			return "neoforge", true, ""
-		case "5":
-			return "vanilla", true, ""
+		if loader, ok := downloader.LoaderByChoice(input); ok {
+			return loader, true, ""
 		}
 		return "", false, "Entrada incorrecta, reintente."
 	})
