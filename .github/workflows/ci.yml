@@ -20,8 +20,7 @@ jobs:
         with:
           go-version-file: go.mod
 
-      # gofmt no depende del SO, con correrlo en linux alcanza. en windows el
-      # checkout puede traer CRLF y marcaria todos los archivos como sin formatear
+      # gofmt no depende del SO, con correrlo en linux alcanza
       - name: Formato
         if: runner.os == 'Linux'
         run: |

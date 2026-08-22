@@ -1,0 +1,10 @@
+# El repo guarda todo en LF y se hace checkout en LF en cualquier sistema, sin
+# depender de como este configurado core.autocrlf en cada maquina. Sin esto, en
+# Windows los archivos quedan con CRLF en el working tree y gofmt marca todo el
+# codigo como sin formatear.
+* text=auto eol=lf
+
+# Los scripts de Windows solo funcionan con CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
