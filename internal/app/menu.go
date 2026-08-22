@@ -18,9 +18,10 @@ import (
 )
 
 const (
-	appName     = "MINECRAFT SERVER MANAGER"
-	appAuthor   = "chomusuke-png (Zumito)"
-	headerWidth = 90
+	appName      = "MINECRAFT SERVER MANAGER"
+	appAuthor    = "chomusuke-png (Zumito)"
+	headerWidth  = 90
+	headerMargin = "  "
 )
 
 func runMenuLoop(reader *bufio.Reader, cfg *config.Config, version string) string {
@@ -117,27 +118,29 @@ func printHeader(version string) {
 	}
 
 	line := strings.Repeat("=", headerWidth)
-	title := "  " + appName
-	padding := headerWidth - len(title) - len(version)
+	title := headerMargin + appName
+	// el margen se descuenta dos veces: el de la izquierda ya viene en title y
+	// el de la derecha es el que despega la version del borde
+	padding := headerWidth - len(title) - len(version) - len(headerMargin)
 	if padding < 1 {
 		padding = 1
 	}
 
 	fmt.Println("\n" + line)
 	fmt.Printf("%s%s%s\n", title, strings.Repeat(" ", padding), version)
-	fmt.Printf("  por %s\n", appAuthor)
+	fmt.Printf("%spor %s\n", headerMargin, appAuthor)
 	fmt.Println(line)
 }
 
 func printInstances(instances []string) {
-	fmt.Println("\n  INSTANCIAS")
+	fmt.Println("\nINSTANCIAS")
 
 	if len(instances) == 0 {
-		fmt.Println("    (no hay instancias creadas)")
+		fmt.Println("  (no hay instancias creadas)")
 		return
 	}
 
-	printInstanceTable(instances, "    ")
+	printInstanceTable(instances, "  ")
 }
 
 // printInstanceTable imprime la tabla numerada de instancias, con el
@@ -153,11 +156,11 @@ func printInstanceTable(instances []string, indent string) {
 }
 
 func printActions() {
-	fmt.Println("\n  ACCIONES")
-	fmt.Println("    C) crear nueva instancia")
-	fmt.Println("    U) actualizar loader de una instancia")
-	fmt.Println("    D) borrar una instancia")
-	fmt.Println("    Q) salir")
+	fmt.Println("\nACCIONES")
+	fmt.Println("  C) crear nueva instancia")
+	fmt.Println("  U) actualizar loader de una instancia")
+	fmt.Println("  D) borrar una instancia")
+	fmt.Println("  Q) salir")
 }
 
 type menuChoice struct {
