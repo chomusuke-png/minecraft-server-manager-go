@@ -92,7 +92,7 @@ Cada instancia puede pisar su propia RAM, puerto, versión de Java, mínimo de b
 
 ## Compilar desde el código fuente
 
-Necesitás [Go 1.25+](https://go.dev/dl/):
+Necesitás [Go 1.27+](https://go.dev/dl/):
 
 ```bash
 # Windows
