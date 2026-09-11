@@ -62,14 +62,26 @@ func (bm *BackupManager) CreateBackup() error {
 
 	logx.Info("Creando backup de '%s': %s...", bm.instanceName, zipName)
 
+	if err := bm.writeBackup(zipPath, existingDirs); err != nil {
+		// un zip a medio escribir no es un backup: si queda, la retencion lo
+		// cuenta como valido y puede desplazar a uno que si sirve
+		discardPartialBackup(zipPath)
+		return err
+	}
+
+	logx.Success("Backup completado exitosamente.")
+	return nil
+}
+
+// writeBackup escribe el zip y solo devuelve nil cuando el backup quedo
+// completo y confirmado en disco
+func (bm *BackupManager) writeBackup(zipPath string, existingDirs []string) error {
 	file, err := os.Create(zipPath)
 	if err != nil {
 		return fmt.Errorf("no se pudo crear archivo zip: %w", err)
 	}
-	defer file.Close()
 
 	zipWriter := zip.NewWriter(file)
-	defer zipWriter.Close()
 
 	for _, dir := range existingDirs {
 		worldPath := filepath.Join(bm.serverDir, dir)
@@ -87,9 +99,9 @@ func (bm *BackupManager) CreateBackup() error {
 				return err
 			}
 
-			// El formato zip siempre usa '/', sin importar el SO. filepath.Rel
+			// el formato zip siempre usa '/', sin importar el SO. filepath.Rel
 			// devuelve '\' en Windows, y sin este ToSlash el zip queda con
-			// entradas no estándar.
+			// entradas no estándar
 			zipEntry, err := zipWriter.Create(filepath.ToSlash(relPath))
 			if err != nil {
 				return err
@@ -106,16 +118,42 @@ func (bm *BackupManager) CreateBackup() error {
 		})
 
 		if err != nil {
+			zipWriter.Close()
+			file.Close()
 			return fmt.Errorf("error comprimiendo '%s': %w", dir, err)
 		}
 	}
 
-	logx.Success("Backup completado exitosamente.")
+	// el zip recien es valido cuando Close escribe el directorio central, asi
+	// que ese error no se puede descartar: hasta que no vuelve bien, lo que hay
+	// en disco es un archivo truncado
+	if err := zipWriter.Close(); err != nil {
+		file.Close()
+		return fmt.Errorf("no se pudo finalizar el zip: %w", err)
+	}
+
+	// sin Sync el zip puede estar solo en el cache del sistema operativo, y a un
+	// backup le importa sobrevivir un corte de luz
+	if err := file.Sync(); err != nil {
+		file.Close()
+		return fmt.Errorf("no se pudo escribir el backup a disco: %w", err)
+	}
+
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("no se pudo cerrar el backup: %w", err)
+	}
 	return nil
 }
 
+// discardPartialBackup borra el zip que quedo de un backup fallido
+func discardPartialBackup(zipPath string) {
+	if err := os.Remove(zipPath); err != nil && !os.IsNotExist(err) {
+		logx.Warn("Quedó un backup incompleto en '%s' y no se pudo borrar: %v", zipPath, err)
+	}
+}
+
 // cleanOldBackups borra los backups más viejos que retentionDays, pero nunca
-// deja menos de keepMin backups en total (los más recientes primero).
+// deja menos de keepMin backups en total (los más recientes primero)
 func (bm *BackupManager) cleanOldBackups() {
 	entries, err := os.ReadDir(bm.backupDir)
 	if err != nil {
