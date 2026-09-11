@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -349,5 +350,53 @@ func TestCreateBackupCleansExpiredBackupsBeforeCreatingNewOne(t *testing.T) {
 	}
 	if len(remaining) != 1 {
 		t.Errorf("se esperaba solo el backup nuevo, quedaron: %v", remaining)
+	}
+}
+
+func TestDiscardPartialBackupBorraElZipIncompleto(t *testing.T) {
+	dir := t.TempDir()
+	zipPath := filepath.Join(dir, "20260101_000000.zip")
+	writeFile(t, zipPath, "zip a medio escribir")
+
+	discardPartialBackup(zipPath)
+
+	if _, err := os.Stat(zipPath); !os.IsNotExist(err) {
+		t.Errorf("el zip incompleto sigue ahí: %v", err)
+	}
+
+	// que ya no esté no es un error: el backup pudo fallar antes de crearlo
+	discardPartialBackup(zipPath)
+}
+
+func TestCreateBackupNoDejaZipCuandoFalla(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("en windows chmod solo toca el bit de solo lectura y el archivo se sigue leyendo")
+	}
+
+	chdirTemp(t)
+	serverDir := "instances/foo"
+	unreadable := filepath.Join(serverDir, "world", "level.dat")
+	writeFile(t, unreadable, "datos del mundo")
+
+	// sin permiso de lectura, el os.Open del Walk falla con el zip ya empezado
+	if err := os.Chmod(unreadable, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(unreadable, 0644) })
+
+	if file, err := os.Open(unreadable); err == nil {
+		file.Close()
+		t.Skip("el usuario actual lee igual un archivo sin permisos, no se puede simular el fallo")
+	}
+
+	bm := New(serverDir, "foo", 7, 3)
+	if err := bm.CreateBackup(); err == nil {
+		t.Fatal("se esperaba error cuando un archivo del mundo no se puede leer")
+	}
+
+	// el zip a medio escribir no puede quedar: la retención lo contaría como
+	// un backup válido
+	if names := zipNames(t, bm.backupDir); len(names) != 0 {
+		t.Errorf("quedaron zips de un backup fallido: %v", names)
 	}
 }
