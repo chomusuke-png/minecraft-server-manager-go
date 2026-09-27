@@ -16,6 +16,7 @@ import (
 const forgeInstallerName = "forge-installer.jar"
 
 type forgeLikeSpec struct {
+	loaderType    string
 	installerName string
 	libraryGroup  []string
 	// vacio = el loader no tiene era legacy: NeoForge arranca en MC 1.20.2, ya
@@ -24,6 +25,7 @@ type forgeLikeSpec struct {
 }
 
 var forgeSpec = forgeLikeSpec{
+	loaderType:      "forge",
 	installerName:   forgeInstallerName,
 	libraryGroup:    []string{"net", "minecraftforge", "forge"},
 	legacyJarPrefix: "forge",
@@ -72,14 +74,7 @@ func (d *Downloader) resolveForgeLikeLaunch(spec forgeLikeSpec, fullVersion stri
 	if argsFile := d.findForgeLikeArgsFile(spec, fullVersion); argsFile != "" {
 		logx.Detail("Loader moderno detectado (sin jar ejecutable).")
 		logx.Detail("Comando de arranque: %s", argsFile)
-
-		launchArgs := []string{}
-		// los instaladores viejos de la era moderna no siempre lo generan, y
-		// pasarlo sin que exista hace fallar a la JVM
-		if fileExists(filepath.Join(d.serverDir, "user_jvm_args.txt")) {
-			launchArgs = append(launchArgs, "@user_jvm_args.txt")
-		}
-		return append(launchArgs, "@"+argsFile, "nogui"), nil
+		return forgeLikeLaunchArgs(d.serverDir, argsFile), nil
 	}
 
 	if spec.legacyJarPrefix == "" {
@@ -109,29 +104,54 @@ func (d *Downloader) resolveForgeLikeLaunch(spec forgeLikeSpec, fullVersion stri
 	return nil, nil
 }
 
-func (d *Downloader) findForgeLikeArgsFile(spec forgeLikeSpec, fullVersion string) string {
-	argsFileName := "unix_args.txt"
-	if runtime.GOOS == "windows" {
-		argsFileName = "win_args.txt"
+// forgeLikeLaunchArgs arma el comando de arranque a partir del args file, igual
+// que lo invoca el run.bat que genera el instalador
+func forgeLikeLaunchArgs(serverDir, argsFile string) []string {
+	launchArgs := []string{}
+	// los instaladores viejos de la era moderna no siempre lo generan, y
+	// pasarlo sin que exista hace fallar a la JVM
+	if fileExists(filepath.Join(serverDir, "user_jvm_args.txt")) {
+		launchArgs = append(launchArgs, "@user_jvm_args.txt")
 	}
+	return append(launchArgs, "@"+argsFile, "nogui")
+}
 
+// platformArgsFileName es el args file que corresponde al SO actual: el del
+// otro trae separadores y classpath incompatibles aunque el archivo exista
+func platformArgsFileName() string {
+	if runtime.GOOS == "windows" {
+		return "win_args.txt"
+	}
+	return "unix_args.txt"
+}
+
+func (d *Downloader) findForgeLikeArgsFile(spec forgeLikeSpec, fullVersion string) string {
 	expectedParts := append([]string{"libraries"}, spec.libraryGroup...)
-	expectedParts = append(expectedParts, fullVersion, argsFileName)
+	expectedParts = append(expectedParts, fullVersion, platformArgsFileName())
 	expected := filepath.ToSlash(filepath.Join(expectedParts...))
 	if fileExists(filepath.Join(d.serverDir, expected)) {
 		return expected
 	}
 
 	// el layout cambio en algunos builds y el script generado siempre apunta
-	// al args file correcto. se prueba primero el del SO actual: el del otro
-	// trae separadores y classpath incompatibles aunque el archivo exista
+	// al args file correcto
+	return argsFileFromRunScripts(d.serverDir)
+}
+
+// argsFileFromRunScripts saca la ruta del args file del run.bat o run.sh que
+// genera el instalador. No necesita saber la version instalada, por eso sirve
+// tambien para reconstruir una instancia que perdio su instance.json
+func argsFileFromRunScripts(serverDir string) string {
+	argsFileName := platformArgsFileName()
+
+	// se prueba primero el script del SO actual
 	scripts := []string{"run.sh", "run.bat"}
 	if runtime.GOOS == "windows" {
 		scripts = []string{"run.bat", "run.sh"}
 	}
 
 	for _, script := range scripts {
-		content, err := os.ReadFile(filepath.Join(d.serverDir, script))
+		content, err := os.ReadFile(filepath.Join(serverDir, script))
 		if err != nil {
 			continue
 		}
@@ -146,7 +166,7 @@ func (d *Downloader) findForgeLikeArgsFile(spec forgeLikeSpec, fullVersion strin
 		if !strings.HasSuffix(found, argsFileName) {
 			continue
 		}
-		if fileExists(filepath.Join(d.serverDir, found)) {
+		if fileExists(filepath.Join(serverDir, found)) {
 			logx.Detail("Args file resuelto desde %s.", script)
 			return found
 		}

@@ -55,6 +55,10 @@ func ensureServerJar(reader *bufio.Reader, dir string, cfg *config.Config, dl *d
 		return true
 	}
 
+	if recoverLoaderInstall(reader, dir) {
+		return true
+	}
+
 	logx.Warn("No se encontró '%s' en '%s'.", cfg.JarName, dir)
 
 	if !prompt.YesNo(reader, "[?] ¿Descargar servidor automáticamente?") {

@@ -15,6 +15,7 @@ const neoForgeMavenMetadataURL = "https://maven.neoforged.net/releases/net/neofo
 
 // NeoForge arranca en MC 1.20.2, ya en la era del args file: nunca tiene jar legacy
 var neoForgeSpec = forgeLikeSpec{
+	loaderType:      "neoforge",
 	installerName:   neoForgeInstallerName,
 	libraryGroup:    []string{"net", "neoforged", "neoforge"},
 	legacyJarPrefix: "",
