@@ -112,6 +112,17 @@ Una build así queda identificada como `dev` y nunca va a ofrecer actualizarse s
 go build -ldflags "-X main.version=vx.x.x" -o builds/msm-windows-amd64.exe ./cmd
 ```
 
+El ícono del `.exe` viene de `cmd/rsrc_windows_amd64.syso`, que está versionado y `go build` enlaza solo al compilar para Windows, así que no hace falta nada extra. Sólo hay que regenerarlo si cambiás el ícono en `winres/`:
+
+```bash
+go install github.com/tc-hib/go-winres@latest
+go-winres make --arch amd64 --in winres/winres.json --out cmd/rsrc
+```
+
+## Créditos
+
+Ícono: [cubo-de-hierba-minecraft](https://icons8.com/icon/XfjNd4vkhBBy/cubo-de-hierba-minecraft) icon by [Icons8](https://icons8.com).
+
 ## Licencia
 
 MIT — ver [LICENSE](./LICENSE).
