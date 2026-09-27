@@ -119,9 +119,19 @@ func DetectMajor(javaPath string) (int, error) {
 		return 0, fmt.Errorf("no se pudo ejecutar '%s': %w", javaPath, err)
 	}
 
+	major, err := parseMajor(output)
+	if err != nil {
+		return 0, fmt.Errorf("no se pudo interpretar la versión de '%s': %w", javaPath, err)
+	}
+	return major, nil
+}
+
+// parseMajor saca el major de la salida de java -version, separado de
+// DetectMajor para poder probarlo sin ejecutar un java real
+func parseMajor(output []byte) (int, error) {
 	match := reportedVersionPattern.FindSubmatch(output)
 	if match == nil {
-		return 0, fmt.Errorf("no se pudo interpretar la versión de '%s': %s", javaPath, output)
+		return 0, fmt.Errorf("formato desconocido: %s", output)
 	}
 
 	first, err := strconv.Atoi(string(match[1]))

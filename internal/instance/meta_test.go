@@ -1,7 +1,6 @@
 package instance
 
 import (
-	"path/filepath"
 	"reflect"
 	"testing"
 )
@@ -29,10 +28,6 @@ func TestSaveAndLoadMetaRoundTrip(t *testing.T) {
 	}
 	if !reflect.DeepEqual(*got, original) {
 		t.Errorf("got %+v, want %+v", got, original)
-	}
-
-	if _, err := filepath.Abs(filepath.Join(dir, "instance.json")); err != nil {
-		t.Fatal(err)
 	}
 }
 

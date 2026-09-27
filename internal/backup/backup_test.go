@@ -10,22 +10,6 @@ import (
 	"time"
 )
 
-// chdirTemp mueve el cwd a un directorio temporal — New() y cleanOldBackups()
-// trabajan con "backups/" relativo al cwd, igual que el resto de la app — y
-// lo restaura al terminar el test.
-func chdirTemp(t *testing.T) {
-	t.Helper()
-	dir := t.TempDir()
-	original, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { os.Chdir(original) })
-}
-
 func writeFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
@@ -127,7 +111,7 @@ func readZipEntry(t *testing.T, zipPath, entryName string) string {
 }
 
 func TestNewCreatesBackupDir(t *testing.T) {
-	chdirTemp(t)
+	t.Chdir(t.TempDir())
 
 	bm := New("instances/foo", "foo", 7, 3)
 
@@ -141,7 +125,7 @@ func TestNewCreatesBackupDir(t *testing.T) {
 }
 
 func TestCreateBackupNoopWithoutWorldDir(t *testing.T) {
-	chdirTemp(t)
+	t.Chdir(t.TempDir())
 	serverDir := "instances/foo"
 	if err := os.MkdirAll(serverDir, 0755); err != nil {
 		t.Fatal(err)
@@ -158,7 +142,7 @@ func TestCreateBackupNoopWithoutWorldDir(t *testing.T) {
 }
 
 func TestCreateBackupReturnsErrorWhenBackupDirUnavailable(t *testing.T) {
-	chdirTemp(t)
+	t.Chdir(t.TempDir())
 	serverDir := "instances/foo"
 	writeFile(t, filepath.Join(serverDir, "world", "level.dat"), "x")
 
@@ -175,7 +159,7 @@ func TestCreateBackupReturnsErrorWhenBackupDirUnavailable(t *testing.T) {
 }
 
 func TestCreateBackupPreservesFileContent(t *testing.T) {
-	chdirTemp(t)
+	t.Chdir(t.TempDir())
 	serverDir := "instances/foo"
 	writeFile(t, filepath.Join(serverDir, "world", "level.dat"), "datos del mundo")
 
@@ -191,7 +175,7 @@ func TestCreateBackupPreservesFileContent(t *testing.T) {
 }
 
 func TestCreateBackupIncludesAllExistingDimensions(t *testing.T) {
-	chdirTemp(t)
+	t.Chdir(t.TempDir())
 	serverDir := "instances/foo"
 	writeFile(t, filepath.Join(serverDir, "world", "level.dat"), "overworld")
 	writeFile(t, filepath.Join(serverDir, "world_nether", "level.dat"), "nether")
@@ -214,7 +198,7 @@ func TestCreateBackupIncludesAllExistingDimensions(t *testing.T) {
 }
 
 func TestCreateBackupWalksNestedDirectories(t *testing.T) {
-	chdirTemp(t)
+	t.Chdir(t.TempDir())
 	serverDir := "instances/foo"
 	writeFile(t, filepath.Join(serverDir, "world", "level.dat"), "level")
 	writeFile(t, filepath.Join(serverDir, "world", "region", "r.0.0.mca"), "chunk")
@@ -237,7 +221,7 @@ func TestCreateBackupWalksNestedDirectories(t *testing.T) {
 // colara todo el server dir, un config.json con datos personales terminaría
 // adentro del zip.
 func TestCreateBackupOnlyIncludesWorldDirs(t *testing.T) {
-	chdirTemp(t)
+	t.Chdir(t.TempDir())
 	serverDir := "instances/foo"
 	writeFile(t, filepath.Join(serverDir, "world", "level.dat"), "level")
 	writeFile(t, filepath.Join(serverDir, "server.jar"), "no es del mundo")
@@ -255,7 +239,7 @@ func TestCreateBackupOnlyIncludesWorldDirs(t *testing.T) {
 }
 
 func TestCleanOldBackupsRespectsKeepMinFloor(t *testing.T) {
-	chdirTemp(t)
+	t.Chdir(t.TempDir())
 	bm := New("instances/foo", "foo", 1, 3) // retención de 1 día, piso de 3
 
 	// 5 backups, todos muy por encima del día de retención.
@@ -280,7 +264,7 @@ func TestCleanOldBackupsRespectsKeepMinFloor(t *testing.T) {
 }
 
 func TestCleanOldBackupsDeletesExpiredBeyondFloor(t *testing.T) {
-	chdirTemp(t)
+	t.Chdir(t.TempDir())
 	bm := New("instances/foo", "foo", 7, 1) // retención 7 días, piso 1
 
 	makeFakeBackup(t, bm.backupDir, "old.zip", 10*24*time.Hour) // vencido y fuera del piso
@@ -298,7 +282,7 @@ func TestCleanOldBackupsDeletesExpiredBeyondFloor(t *testing.T) {
 }
 
 func TestCleanOldBackupsKeepsRecentEvenBeyondFloor(t *testing.T) {
-	chdirTemp(t)
+	t.Chdir(t.TempDir())
 	bm := New("instances/foo", "foo", 7, 1) // piso de 1, pero ninguno está vencido
 
 	makeFakeBackup(t, bm.backupDir, "a.zip", time.Hour)
@@ -313,7 +297,7 @@ func TestCleanOldBackupsKeepsRecentEvenBeyondFloor(t *testing.T) {
 }
 
 func TestCleanOldBackupsIgnoresNonZipFiles(t *testing.T) {
-	chdirTemp(t)
+	t.Chdir(t.TempDir())
 	bm := New("instances/foo", "foo", 1, 0)
 
 	makeFakeBackup(t, bm.backupDir, "old.zip", 100*24*time.Hour)
@@ -333,7 +317,7 @@ func TestCleanOldBackupsIgnoresNonZipFiles(t *testing.T) {
 }
 
 func TestCreateBackupCleansExpiredBackupsBeforeCreatingNewOne(t *testing.T) {
-	chdirTemp(t)
+	t.Chdir(t.TempDir())
 	serverDir := "instances/foo"
 	writeFile(t, filepath.Join(serverDir, "world", "level.dat"), "level")
 
@@ -373,7 +357,7 @@ func TestCreateBackupNoDejaZipCuandoFalla(t *testing.T) {
 		t.Skip("en windows chmod solo toca el bit de solo lectura y el archivo se sigue leyendo")
 	}
 
-	chdirTemp(t)
+	t.Chdir(t.TempDir())
 	serverDir := "instances/foo"
 	unreadable := filepath.Join(serverDir, "world", "level.dat")
 	writeFile(t, unreadable, "datos del mundo")

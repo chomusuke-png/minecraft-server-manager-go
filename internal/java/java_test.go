@@ -93,7 +93,7 @@ func TestUnknownRequirementSatisfiedByAnything(t *testing.T) {
 }
 
 // DetectMajor tiene que entender el formato legacy 1.8.0_x y el moderno.
-func TestDetectMajorParsesBothFormats(t *testing.T) {
+func TestParseMajor(t *testing.T) {
 	cases := []struct {
 		output string
 		want   int
@@ -101,27 +101,32 @@ func TestDetectMajorParsesBothFormats(t *testing.T) {
 		{`openjdk version "17.0.20" 2026-01-20`, 17},
 		{`openjdk version "1.8.0_502"`, 8},
 		{`java version "21.0.12" 2025-07-15 LTS`, 21},
+		// las versiones GA salen sin minor ni patch
+		{`openjdk version "21" 2023-09-19`, 21},
+		// java -version escribe varias lineas y la version va en la primera
+		{"openjdk version \"17.0.9\" 2023-10-17\nOpenJDK Runtime Environment Temurin-17.0.9+9", 17},
 	}
 
 	for _, c := range cases {
-		match := reportedVersionPattern.FindStringSubmatch(c.output)
-		if match == nil {
-			t.Errorf("no matcheó %q", c.output)
+		got, err := parseMajor([]byte(c.output))
+		if err != nil {
+			t.Errorf("parseMajor(%q) falló: %v", c.output, err)
 			continue
 		}
-		got := 0
-		if match[1] == "1" {
-			got = atoiOrZero(match[2])
-		} else {
-			got = atoiOrZero(match[1])
-		}
 		if got != c.want {
-			t.Errorf("de %q se sacó %d, want %d", c.output, got, c.want)
+			t.Errorf("parseMajor(%q) = %d, want %d", c.output, got, c.want)
 		}
 	}
 }
 
-func atoiOrZero(value string) int {
-	parsed, _ := leadingInt(value)
-	return parsed
+func TestParseMajorRechazaSalidasIlegibles(t *testing.T) {
+	for _, output := range []string{
+		"'java' no se reconoce como un comando interno o externo",
+		// legacy sin el numero de despues del 1.
+		`java version "1"`,
+	} {
+		if got, err := parseMajor([]byte(output)); err == nil {
+			t.Errorf("parseMajor(%q) = %d, se esperaba error", output, got)
+		}
+	}
 }
