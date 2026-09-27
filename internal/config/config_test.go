@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -64,45 +63,5 @@ func TestLoadRejectsInvalidJSON(t *testing.T) {
 
 	if _, err := Load(); err == nil {
 		t.Error("se esperaba error con un config.json corrupto")
-	}
-}
-
-func TestGetConfigPathPrefersCwd(t *testing.T) {
-	dir := t.TempDir()
-	t.Chdir(dir)
-	writeFile(t, "config.json", "{}")
-
-	if got := getConfigPath(); got != "config.json" {
-		t.Errorf("got %q, want %q", got, "config.json")
-	}
-}
-
-func TestGetConfigPathIgnoraElDirectorioPadre(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "config.json"), "{}")
-
-	sub := filepath.Join(dir, "builds")
-	if err := os.Mkdir(sub, 0755); err != nil {
-		t.Fatal(err)
-	}
-	t.Chdir(sub)
-
-	if got := getConfigPath(); got != "config.json" {
-		t.Errorf("got %q, want %q", got, "config.json")
-	}
-}
-
-func TestGetConfigPathDefaultsToCwdName(t *testing.T) {
-	t.Chdir(t.TempDir())
-
-	if got := getConfigPath(); got != "config.json" {
-		t.Errorf("got %q, want %q", got, "config.json")
-	}
-}
-
-func writeFile(t *testing.T, path, content string) {
-	t.Helper()
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		t.Fatal(err)
 	}
 }

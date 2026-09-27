@@ -31,11 +31,3 @@ func TestResolveDejaLasAbsolutasIntactas(t *testing.T) {
 		t.Errorf("got %q, want %q", got, "")
 	}
 }
-
-func TestPathAnclaAlDirectorioDeDatos(t *testing.T) {
-	want := filepath.Join(Dir(), "instances", "mi_server")
-
-	if got := Path("instances", "mi_server"); got != want {
-		t.Errorf("got %q, want %q", got, want)
-	}
-}

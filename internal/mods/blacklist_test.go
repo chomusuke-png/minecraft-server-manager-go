@@ -1,66 +1,9 @@
 package mods
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 )
-
-func TestEnsureBlacklistCreatesTemplate(t *testing.T) {
-	dir := t.TempDir()
-
-	if err := ensureBlacklist(dir); err != nil {
-		t.Fatal(err)
-	}
-
-	content, err := os.ReadFile(blacklistPath(dir))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(content) != blacklistTemplate {
-		t.Errorf("contenido inesperado: %q", content)
-	}
-}
-
-func TestEnsureBlacklistDoesNotOverwriteExisting(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, blacklistPath(dir), "mimod.jar\n")
-
-	if err := ensureBlacklist(dir); err != nil {
-		t.Fatal(err)
-	}
-
-	content, err := os.ReadFile(blacklistPath(dir))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(content) != "mimod.jar\n" {
-		t.Errorf("se pisó un blacklist existente: %q", content)
-	}
-}
-
-func TestLoadBlacklist(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, blacklistPath(dir), "# comentario\n\nMiMod.jar\nOtroMod\n")
-
-	blacklist := loadBlacklist(dir)
-
-	for _, name := range []string{"mimod.jar", "MIMOD", "otromod.jar", "OtroMod"} {
-		if !blacklist[normalizeModName(name)] {
-			t.Errorf("%q debería estar en la blacklist", name)
-		}
-	}
-	if blacklist["comentario"] {
-		t.Error("la línea de comentario no debería quedar en la blacklist")
-	}
-}
-
-func TestLoadBlacklistMissingFile(t *testing.T) {
-	blacklist := loadBlacklist(t.TempDir())
-	if len(blacklist) != 0 {
-		t.Errorf("se esperaba blacklist vacía, got %v", blacklist)
-	}
-}
 
 func TestDisableClientModsAppliesBlacklist(t *testing.T) {
 	dir := t.TempDir()

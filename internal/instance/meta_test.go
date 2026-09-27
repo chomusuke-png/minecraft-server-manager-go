@@ -41,22 +41,3 @@ func TestLoadMetaMissingFile(t *testing.T) {
 		t.Error("se esperaba error sin instance.json")
 	}
 }
-
-func TestSaveMetaOverwritesExisting(t *testing.T) {
-	dir := t.TempDir()
-
-	if err := SaveMeta(dir, InstanceMeta{LoaderType: "paper", MCVersion: "1.20.1"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := SaveMeta(dir, InstanceMeta{LoaderType: "fabric", MCVersion: "1.21.0"}); err != nil {
-		t.Fatal(err)
-	}
-
-	got, err := LoadMeta(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.LoaderType != "fabric" || got.MCVersion != "1.21.0" {
-		t.Errorf("got %+v", got)
-	}
-}

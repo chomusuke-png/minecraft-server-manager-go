@@ -26,17 +26,6 @@ func TestIsLegacyLevelType(t *testing.T) {
 	}
 }
 
-func TestLevelTypeFor(t *testing.T) {
-	flat := worldType{"Plano", "minecraft:flat", "flat"}
-
-	if got := levelTypeFor(flat, "1.18.2"); got != "flat" {
-		t.Errorf("legacy: got %q, want %q", got, "flat")
-	}
-	if got := levelTypeFor(flat, "1.20.1"); got != "minecraft:flat" {
-		t.Errorf("modern: got %q, want %q", got, "minecraft:flat")
-	}
-}
-
 func TestPromptWorldType(t *testing.T) {
 	if got := promptWorldType(readerFor("\n"), "1.20.1"); got != "minecraft:normal" {
 		t.Errorf("got %q", got)

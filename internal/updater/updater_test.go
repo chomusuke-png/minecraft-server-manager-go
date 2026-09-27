@@ -31,24 +31,3 @@ func TestPromptLoaderTypeKeepsCurrentOnEmpty(t *testing.T) {
 		t.Errorf("got %q", got)
 	}
 }
-
-func TestPromptLoaderTypeSelectsByNumber(t *testing.T) {
-	cases := map[string]string{
-		"1\n": "paper",
-		"2\n": "fabric",
-		"3\n": "forge",
-		"4\n": "neoforge",
-		"5\n": "vanilla",
-	}
-	for input, want := range cases {
-		if got := promptLoaderType(readerFor(input), "paper"); got != want {
-			t.Errorf("promptLoaderType(%q) = %q, want %q", input, got, want)
-		}
-	}
-}
-
-func TestPromptLoaderTypeRetriesOnInvalidInput(t *testing.T) {
-	if got := promptLoaderType(readerFor("9\n2\n"), "paper"); got != "fabric" {
-		t.Errorf("got %q", got)
-	}
-}

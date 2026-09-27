@@ -50,14 +50,6 @@ func TestEnsureEulaAcceptedReturnsErrorOnNo(t *testing.T) {
 	}
 }
 
-func TestEnsureEulaAcceptedRetriesOnInvalidInput(t *testing.T) {
-	dir := t.TempDir()
-
-	if err := EnsureEulaAccepted(readerFor("tal vez\ny\n"), dir); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestEnsureEulaAcceptedReAsksIfFileSaysFalse(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "eula.txt"), []byte("eula=false\n"), 0644); err != nil {

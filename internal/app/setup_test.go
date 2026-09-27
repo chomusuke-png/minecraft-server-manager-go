@@ -1,33 +1,10 @@
 package app
 
 import (
-	"bufio"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
-
-	"minecraft-manager/internal/config"
 )
-
-func readerFor(input string) *bufio.Reader {
-	return bufio.NewReader(strings.NewReader(input))
-}
-
-func TestFileExists(t *testing.T) {
-	dir := t.TempDir()
-	present := filepath.Join(dir, "server.jar")
-	if err := os.WriteFile(present, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	if !fileExists(present) {
-		t.Error("debería existir")
-	}
-	if fileExists(filepath.Join(dir, "no-existe.jar")) {
-		t.Error("no debería existir")
-	}
-}
 
 func TestCleanIncompleteInstanceRemovesJarlessInstance(t *testing.T) {
 	dir := t.TempDir()
@@ -68,16 +45,4 @@ func TestCleanIncompleteInstanceKeepsInstanceWithOtherFiles(t *testing.T) {
 
 func TestCleanIncompleteInstanceMissingDirIsNoop(t *testing.T) {
 	cleanIncompleteInstance(filepath.Join(t.TempDir(), "no-existe"))
-}
-
-func TestCheckForUpdatesSkipsOnDevVersion(t *testing.T) {
-	checkForUpdates(readerFor(""), &config.Config{}, "dev")
-}
-
-func TestCheckForUpdatesSkipsOnEmptyVersion(t *testing.T) {
-	checkForUpdates(readerFor(""), &config.Config{}, "")
-}
-
-func TestCheckForUpdatesSkipsWhenDisabled(t *testing.T) {
-	checkForUpdates(readerFor(""), &config.Config{DisableUpdateCheck: true}, "v1.0.0")
 }

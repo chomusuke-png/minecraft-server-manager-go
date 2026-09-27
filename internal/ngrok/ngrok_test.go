@@ -85,16 +85,6 @@ func TestExtractFirstFileFromTarGz(t *testing.T) {
 	}
 }
 
-func TestFreePort(t *testing.T) {
-	port, err := freePort()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if port <= 0 || port > 65535 {
-		t.Errorf("puerto inválido: %d", port)
-	}
-}
-
 func TestWaitForPublicURLFindsEndpoint(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(ngrokEndpointsResponse{

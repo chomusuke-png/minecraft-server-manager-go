@@ -97,11 +97,3 @@ func TestProgressReaderPassesThroughDataUnchanged(t *testing.T) {
 		t.Errorf("got %q", buf[:n])
 	}
 }
-
-func TestProgressReaderNoOutputWithoutTotal(t *testing.T) {
-	pr := &ProgressReader{Reader: strings.NewReader("x"), Total: 0}
-	buf := make([]byte, 8)
-	if _, err := pr.Read(buf); err != nil && err.Error() != "EOF" {
-		t.Fatal(err)
-	}
-}

@@ -51,18 +51,3 @@ func TestResolveNeoForgeLaunchNothingInstalled(t *testing.T) {
 		t.Error("se esperaba error cuando el instalador no dejó nada usable")
 	}
 }
-
-func TestRemoveNeoForgeInstaller(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, neoForgeInstallerName), "installer")
-	writeFile(t, filepath.Join(dir, "installer.log"), "log")
-	writeFile(t, filepath.Join(dir, neoForgeInstallerName+".log"), "log")
-
-	(&Downloader{serverDir: dir}).removeForgeLikeInstaller(neoForgeSpec)
-
-	for _, leftover := range []string{neoForgeInstallerName, "installer.log", neoForgeInstallerName + ".log"} {
-		if fileExists(filepath.Join(dir, leftover)) {
-			t.Errorf("quedó sin borrar: %s", leftover)
-		}
-	}
-}

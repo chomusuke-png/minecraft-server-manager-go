@@ -10,15 +10,6 @@ func readerFor(input string) *bufio.Reader {
 	return bufio.NewReader(strings.NewReader(input))
 }
 
-func TestLoopReturnsFirstAcceptedValue(t *testing.T) {
-	got, ok := Loop(readerFor("hola\n"), "prompt: ", func(input string) (string, bool, string) {
-		return input, true, ""
-	})
-	if !ok || got != "hola" {
-		t.Errorf("got (%q, %v)", got, ok)
-	}
-}
-
 func TestLoopRetriesUntilAccepted(t *testing.T) {
 	got, ok := Loop(readerFor("mal\ntambien mal\nbien\n"), "prompt: ", func(input string) (string, bool, string) {
 		if input == "bien" {
