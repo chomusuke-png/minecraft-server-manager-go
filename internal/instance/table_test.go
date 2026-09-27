@@ -83,3 +83,25 @@ func TestFormatInstanceTableAlineaLasColumnas(t *testing.T) {
 		}
 	}
 }
+
+func TestFormatInstanceTableSinInstanceJSONMuestraElTunelPorDefecto(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	// una instancia armada a mano: tiene server.properties pero no instance.json
+	dir := filepath.Join(InstancesRootDir, "a_mano")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "server.properties"), []byte("server-port=25565\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, rows := FormatInstanceTable([]string{"a_mano"})
+
+	// al arrancar setupTunnel usa Playit aunque no haya instance.json, asi que
+	// la tabla tiene que decir lo mismo
+	wantRow := []string{"a_mano", "-", "-", "-", "-", "25565", "playit"}
+	if got := strings.Fields(rows[0]); !slices.Equal(got, wantRow) {
+		t.Errorf("fila = %v, want %v", got, wantRow)
+	}
+}

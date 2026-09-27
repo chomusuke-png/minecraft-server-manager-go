@@ -146,7 +146,9 @@ func FormatInstanceTable(names []string) (string, []string) {
 // columna, con "-" en los que todavia no existen
 func instanceCells(name string) []string {
 	instanceDir := filepath.Join(InstancesRootDir, name)
-	loader, version, loaderVersion, ram, tunnel := "-", "-", "-", "-", "-"
+	// sin proveedor guardado se usa Playit, haya o no instance.json, igual que
+	// hace setupTunnel al arrancar
+	loader, version, loaderVersion, ram, tunnel := "-", "-", "-", "-", "playit"
 
 	if meta, err := LoadMeta(instanceDir); err == nil {
 		if meta.LoaderType != "" {
@@ -163,8 +165,6 @@ func instanceCells(name string) []string {
 		if meta.RAMGB > 0 {
 			ram = fmt.Sprintf("%dGB", meta.RAMGB)
 		}
-		// sin proveedor guardado se usa Playit
-		tunnel = "playit"
 		if meta.TunnelProvider != "" {
 			tunnel = meta.TunnelProvider
 		}
