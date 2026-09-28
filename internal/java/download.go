@@ -38,6 +38,17 @@ func Download(major int) (string, error) {
 		return "", err
 	}
 
+	destination := filepath.Join(RuntimesRootDir, fmt.Sprintf("jdk-%d", major))
+
+	// Idempotente: si ya está extraído y funciona, no rebajar 180MB al vacío.
+	// Va antes de consultar Adoptium para que funcione sin internet.
+	if existing := findJavaBinary(destination); existing != "" {
+		if detected, err := DetectMajor(existing); err == nil && detected == major {
+			logx.Detail("Java %d ya estaba descargado en '%s'.", major, existing)
+			return existing, nil
+		}
+	}
+
 	// El endpoint /v3/binary/latest/... redirige directo al asset sin dar
 	// checksum. El endpoint /v3/assets/latest/... da el mismo binario más su
 	// sha256, así que se usa este para poder verificar lo que se descarga y
@@ -56,16 +67,6 @@ func Download(major int) (string, error) {
 	}
 	url := assets[0].Binary.Package.Link
 	sha256Hex := assets[0].Binary.Package.Checksum
-
-	destination := filepath.Join(RuntimesRootDir, fmt.Sprintf("jdk-%d", major))
-
-	// Idempotente: si ya está extraído y funciona, no rebajar 180MB al vacío.
-	if existing := findJavaBinary(destination); existing != "" {
-		if detected, err := DetectMajor(existing); err == nil && detected == major {
-			logx.Detail("Java %d ya estaba descargado en '%s'.", major, existing)
-			return existing, nil
-		}
-	}
 
 	if err := os.MkdirAll(destination, 0755); err != nil {
 		return "", fmt.Errorf("no se pudo crear '%s': %w", destination, err)
