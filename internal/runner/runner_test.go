@@ -157,3 +157,25 @@ func TestBuildJavaArgsQuiltRAMPosition(t *testing.T) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
+
+// sin version de Minecraft reconocida no se sabe que Java pedir: si el de la
+// instancia ya no existe se vuelve al global, sin guardarlo
+func TestReplaceMissingJavaVuelveAlGlobal(t *testing.T) {
+	meta := &instance.InstanceMeta{JavaPath: filepath.Join(t.TempDir(), "jdk-viejo", "bin", "java.exe")}
+
+	if !testRunner().replaceMissingJava(t.TempDir(), meta, meta.JavaPath, nil) {
+		t.Fatal("debería poder seguir con el Java global")
+	}
+	if meta.JavaPath != "" {
+		t.Errorf("java_path = %q, debería quedar vacío para usar el global", meta.JavaPath)
+	}
+}
+
+func TestReplaceMissingJavaSinAlternativa(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "jdk-viejo", "bin", "java.exe")
+	r := New(&config.Config{JavaPath: missing, JarName: "server.jar", RAMGB: 4})
+
+	if r.replaceMissingJava(t.TempDir(), &instance.InstanceMeta{}, missing, nil) {
+		t.Error("si el que falta es el global no hay a qué volver")
+	}
+}

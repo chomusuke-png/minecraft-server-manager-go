@@ -43,15 +43,24 @@ func (r *Runner) Start(instanceDir string) {
 		return
 	}
 
+	// arranca antes de resolver Java porque reemplazar un java faltante ya
+	// necesita preguntar
+	stdinLines := make(chan string)
+	go forwardStdin(stdinLines)
+
 	javaPath := r.resolveJava(meta)
+	if java.Missing(javaPath) {
+		if !r.replaceMissingJava(instanceDir, meta, javaPath, stdinLines) {
+			return
+		}
+		javaPath = r.resolveJava(meta)
+	}
+
 	ramGB := r.resolveRAM(meta)
 	javaArgs := r.buildJavaArgs(meta, ramGB)
 
 	signalChannel := make(chan os.Signal, 1)
 	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
-
-	stdinLines := make(chan string)
-	go forwardStdin(stdinLines)
 
 	for {
 		logx.Info("INICIANDO SERVIDOR (%dGB RAM) en '%s'...", ramGB, instanceDir)
@@ -103,7 +112,9 @@ func (r *Runner) resolveJava(meta *instance.InstanceMeta) string {
 	}
 
 	requirement := java.RequireFor(meta.LoaderType, meta.MCVersion)
-	if requirement.Min == 0 {
+	// si falta, Start ofrece reemplazarlo y verificarlo aca solo daria un aviso
+	// confuso
+	if requirement.Min == 0 || java.Missing(javaPath) {
 		return javaPath
 	}
 
@@ -140,6 +151,35 @@ func (r *Runner) offerJavaFix(instanceDir string, meta *instance.InstanceMeta, j
 	logx.Warn("El arranque falló y parece un problema de versión de Java: %s %s requiere %s.",
 		meta.LoaderType, meta.MCVersion, requirement)
 
+	return r.repairJava(instanceDir, meta, requirement, stdinLines)
+}
+
+// replaceMissingJava ofrece otro runtime cuando la ruta configurada ya no
+// existe, antes de arrancar: pasa cuando el JDK se actualiza solo y cambia de
+// carpeta, o cuando se movio la carpeta del programa. Devuelve false si no hay
+// con que arrancar
+func (r *Runner) replaceMissingJava(instanceDir string, meta *instance.InstanceMeta, javaPath string, stdinLines <-chan string) bool {
+	logx.Warn("No se encuentra el Java configurado: '%s'.", javaPath)
+	logx.Detail("Puede que se haya actualizado a otra carpeta o que se haya movido el programa.")
+
+	requirement := java.RequireFor(meta.LoaderType, meta.MCVersion)
+	if requirement.Min == 0 {
+		// sin version reconocida no se sabe que pedir: se vuelve al java global,
+		// sin guardarlo, para no pisar una eleccion hecha a mano
+		if meta.JavaPath == "" || java.Missing(r.cfg.JavaPath) {
+			logx.Error("Corrige java_path en instance.json o en config.json.")
+			return false
+		}
+		logx.Info("Se usa el Java global: %s", r.cfg.JavaPath)
+		meta.JavaPath = ""
+		return true
+	}
+
+	return r.repairJava(instanceDir, meta, requirement, stdinLines)
+}
+
+// repairJava consigue un runtime que cumpla y lo guarda en instance.json
+func (r *Runner) repairJava(instanceDir string, meta *instance.InstanceMeta, requirement java.Requirement, stdinLines <-chan string) bool {
 	resolved, err := java.Repair(askFromStdinLines(stdinLines), requirement)
 	if err != nil {
 		logx.Error("%v", err)
@@ -153,9 +193,9 @@ func (r *Runner) offerJavaFix(instanceDir string, meta *instance.InstanceMeta, j
 	return true
 }
 
-// askFromStdinLines lee del canal que alimenta forwardStdin. Es seguro usarlo acá
-// porque en este punto el servidor ya terminó y nadie más está consumiendo el
-// canal.
+// askFromStdinLines lee del canal que alimenta forwardStdin. Es seguro usarlo
+// antes de arrancar el servidor o después de que terminó, porque ahí nadie más
+// está consumiendo el canal.
 func askFromStdinLines(lines <-chan string) java.AskLine {
 	return func(promptText string) (string, bool) {
 		fmt.Print(promptText)
