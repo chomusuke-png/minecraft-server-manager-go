@@ -220,16 +220,23 @@ func (r *Runner) verifyLaunchTarget(instanceDir string, meta *instance.InstanceM
 		return nil
 	}
 
-	for _, arg := range meta.LaunchArgs {
-		if !strings.HasPrefix(arg, "@") {
+	for i, arg := range meta.LaunchArgs {
+		var required string
+		switch {
+		case strings.HasPrefix(arg, "@"):
+			required = strings.TrimPrefix(arg, "@")
+		case arg == "-jar" && i+1 < len(meta.LaunchArgs):
+			// Quilt arranca con su propio lanzador en vez de un args file
+			required = meta.LaunchArgs[i+1]
+		default:
 			continue
 		}
-		// Java resuelve los @argfile relativos al cwd, que es el dir de la instancia.
-		argFile := filepath.Join(instanceDir, filepath.FromSlash(strings.TrimPrefix(arg, "@")))
-		if _, err := os.Stat(argFile); err != nil {
+		// Java resuelve las rutas relativas al cwd, que es el dir de la instancia.
+		requiredPath := filepath.Join(instanceDir, filepath.FromSlash(required))
+		if _, err := os.Stat(requiredPath); err != nil {
 			return fmt.Errorf(
 				"falta '%s', requerido por launch_args de instance.json.\nReinstala el loader desde el menú de actualización",
-				argFile,
+				requiredPath,
 			)
 		}
 	}

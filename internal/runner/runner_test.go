@@ -2,6 +2,8 @@ package runner
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 
@@ -119,5 +121,39 @@ func TestBuildJavaArgsDoesNotMutateMeta(t *testing.T) {
 
 	if !slices.Equal(meta.LaunchArgs, original) {
 		t.Errorf("launch_args mutado: got %q, want %q", meta.LaunchArgs, original)
+	}
+}
+
+// Quilt arranca con -jar sobre su lanzador y no con un args file: si falta hay
+// que avisarlo antes de invocar a Java.
+func TestVerifyLaunchTargetQuiltLauncher(t *testing.T) {
+	dir := t.TempDir()
+	meta := &instance.InstanceMeta{
+		LoaderType: "quilt",
+		LaunchArgs: []string{"-jar", "quilt-server-launch.jar", "nogui"},
+	}
+
+	if err := testRunner().verifyLaunchTarget(dir, meta); err == nil {
+		t.Error("sin el lanzador de Quilt debería dar error")
+	}
+
+	if err := os.WriteFile(filepath.Join(dir, "quilt-server-launch.jar"), nil, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := testRunner().verifyLaunchTarget(dir, meta); err != nil {
+		t.Errorf("con el lanzador presente no debería dar error: %v", err)
+	}
+}
+
+func TestBuildJavaArgsQuiltRAMPosition(t *testing.T) {
+	meta := &instance.InstanceMeta{
+		LoaderType: "quilt",
+		LaunchArgs: []string{"-jar", "quilt-server-launch.jar", "nogui"},
+	}
+
+	got := testRunner().buildJavaArgs(meta, 6)
+	want := []string{"-Xmx6G", "-Xms6G", "-jar", "quilt-server-launch.jar", "nogui"}
+	if !slices.Equal(got, want) {
+		t.Errorf("got %q, want %q", got, want)
 	}
 }
