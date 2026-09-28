@@ -337,6 +337,7 @@ func findInRuntimes(req Requirement) string {
 		filepath.Join(RuntimesRootDir, "*", "*", "bin", binaryName()),
 	}
 
+	var candidates []runtimeCandidate
 	for _, pattern := range patterns {
 		matches, err := filepath.Glob(pattern)
 		if err != nil {
@@ -347,12 +348,34 @@ func findInRuntimes(req Requirement) string {
 			if err != nil {
 				continue
 			}
-			if req.Satisfies(major) {
-				return match
-			}
+			candidates = append(candidates, runtimeCandidate{path: match, major: major})
 		}
 	}
-	return ""
+	return pickRuntime(candidates, req)
+}
+
+type runtimeCandidate struct {
+	path  string
+	major int
+}
+
+// pickRuntime elige, entre los que cumplen, el de major mas bajo: es el mismo
+// que bajaria Download y el mas compatible con mods viejos. el orden alfabetico
+// de las carpetas no sirve porque pone jdk-21 antes que jdk-8
+func pickRuntime(candidates []runtimeCandidate, req Requirement) string {
+	best := -1
+	for i, candidate := range candidates {
+		if !req.Satisfies(candidate.major) {
+			continue
+		}
+		if best == -1 || candidate.major < candidates[best].major {
+			best = i
+		}
+	}
+	if best == -1 {
+		return ""
+	}
+	return candidates[best].path
 }
 
 // Absolute expande una ruta de java relativa a absoluta.

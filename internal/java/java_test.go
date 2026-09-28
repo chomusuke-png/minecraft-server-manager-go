@@ -228,3 +228,34 @@ func TestMissing(t *testing.T) {
 		t.Error("un comando pelado lo resuelve el PATH, no cuenta como faltante")
 	}
 }
+
+func TestPickRuntimeEligeElMajorMasBajoQueCumple(t *testing.T) {
+	// el orden en que llegan es el alfabetico de las carpetas
+	candidates := []runtimeCandidate{
+		{path: "runtimes/jdk-11/bin/java", major: 11},
+		{path: "runtimes/jdk-17/bin/java", major: 17},
+		{path: "runtimes/jdk-21/bin/java", major: 21},
+		{path: "runtimes/jdk-8/bin/java", major: 8},
+	}
+
+	cases := []struct {
+		req  Requirement
+		want string
+	}{
+		{Requirement{Min: 17}, "runtimes/jdk-17/bin/java"},
+		{Requirement{Min: 21, Max: 22}, "runtimes/jdk-21/bin/java"},
+		// antes ganaba jdk-11 por venir primero
+		{Requirement{Min: 8, Max: 11}, "runtimes/jdk-8/bin/java"},
+		{Requirement{Min: 25}, ""},
+	}
+
+	for _, c := range cases {
+		if got := pickRuntime(candidates, c.req); got != c.want {
+			t.Errorf("pickRuntime(%+v) = %q, want %q", c.req, got, c.want)
+		}
+	}
+
+	if got := pickRuntime(nil, Requirement{Min: 17}); got != "" {
+		t.Errorf("sin candidatos = %q, want vacío", got)
+	}
+}
