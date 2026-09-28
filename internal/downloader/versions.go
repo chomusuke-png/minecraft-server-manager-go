@@ -65,6 +65,7 @@ func ChooseLoaderVersion(reader *bufio.Reader, loaderType, mcVersion, current st
 var loaderVersionResolvers = map[string]func(mcVersion string) (loaderVersions, error){
 	"paper":    paperVersions,
 	"fabric":   func(string) (loaderVersions, error) { return fabricVersions() },
+	"quilt":    quiltVersions,
 	"forge":    forgeVersions,
 	"neoforge": neoForgeVersions,
 }
@@ -262,7 +263,7 @@ func promptCustomVersion(reader *bufio.Reader, label string, available loaderVer
 }
 
 // Install descarga el loader ya elegido y devuelve la version instalada junto a
-// los args de arranque, que solo traen Forge y NeoForge
+// los args de arranque, que solo traen Quilt, Forge y NeoForge
 func (d *Downloader) Install(loaderType, mcVersion, loaderVersion string) (string, []string, error) {
 	switch loaderType {
 	case "paper":
@@ -271,6 +272,8 @@ func (d *Downloader) Install(loaderType, mcVersion, loaderVersion string) (strin
 	case "fabric":
 		version, err := d.DownloadFabric(mcVersion, loaderVersion)
 		return version, nil, err
+	case "quilt":
+		return d.DownloadQuilt(mcVersion, loaderVersion)
 	case "forge":
 		return d.DownloadForge(mcVersion, loaderVersion)
 	case "neoforge":

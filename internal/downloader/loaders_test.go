@@ -18,8 +18,8 @@ func TestLoaderByChoice(t *testing.T) {
 		ok    bool
 	}{
 		{"1", "paper", true},
-		{"5", "vanilla", true},
-		{"6", "", false},
+		{"6", "vanilla", true},
+		{"7", "", false},
 		{"0", "", false},
 		{"-1", "", false},
 		{"", "", false},
@@ -36,7 +36,7 @@ func TestLoaderByChoice(t *testing.T) {
 
 // los menus numeran a partir de Loaders, asi que el orden es parte del contrato
 func TestLoadersMantieneElOrdenDeLosMenus(t *testing.T) {
-	want := []string{"paper", "fabric", "forge", "neoforge", "vanilla"}
+	want := []string{"paper", "fabric", "quilt", "forge", "neoforge", "vanilla"}
 
 	if len(Loaders) != len(want) {
 		t.Fatalf("hay %d loaders, se esperaban %d", len(Loaders), len(want))

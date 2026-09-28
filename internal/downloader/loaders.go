@@ -15,6 +15,7 @@ type Loader struct {
 var Loaders = []Loader{
 	{Type: "paper", Label: "Paper"},
 	{Type: "fabric", Label: "Fabric"},
+	{Type: "quilt", Label: "Quilt"},
 	{Type: "forge", Label: "Forge"},
 	{Type: "neoforge", Label: "NeoForge"},
 	{Type: "vanilla", Label: "Vanilla"},

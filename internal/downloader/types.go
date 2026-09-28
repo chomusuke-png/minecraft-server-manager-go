@@ -43,6 +43,22 @@ type FabricInstaller struct {
 	Url     string `json:"url"`
 }
 
+// QuiltLoader es una entrada del listado general de loaders de Quilt
+type QuiltLoader struct {
+	Version string `json:"version"`
+}
+
+// QuiltLoaderForMC es una entrada del listado filtrado por version de
+// Minecraft, que anida el loader junto a sus mappings
+type QuiltLoaderForMC struct {
+	Loader QuiltLoader `json:"loader"`
+}
+
+type QuiltInstaller struct {
+	Version string `json:"version"`
+	URL     string `json:"url"`
+}
+
 type ForgePromotions struct {
 	Homepage string            `json:"homepage"`
 	Promos   map[string]string `json:"promos"`

@@ -321,7 +321,7 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 	}
 
 	if len(launchArgs) > 0 {
-		logx.Success("%s %s instalado (arranca vía args file, sin server.jar).", loaderType, version)
+		logx.Success("%s %s instalado (arranca con el comando guardado en instance.json).", loaderType, version)
 	} else {
 		logx.Success("'server.jar' instalado para la versión %s.", version)
 	}
