@@ -336,7 +336,7 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 }
 
 func (d *Downloader) resolveJava(reader *bufio.Reader, loaderType string, mcVersion string) error {
-	resolved, err := java.Resolve(reader, java.Require(mcVersion), d.javaPath)
+	resolved, err := java.Resolve(reader, java.RequireFor(loaderType, mcVersion), d.javaPath)
 	if err != nil {
 		return err
 	}

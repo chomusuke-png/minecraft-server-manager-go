@@ -130,3 +130,32 @@ func TestParseMajorRechazaSalidasIlegibles(t *testing.T) {
 		}
 	}
 }
+
+func TestRequireFor(t *testing.T) {
+	cases := []struct {
+		loaderType string
+		mcVersion  string
+		want       Requirement
+	}{
+		// sin tope propio queda igual que Require
+		{"neoforge", "1.21.1", Requirement{Min: 21}},
+		{"forge", "1.20.1", Requirement{Min: 17}},
+		// arclight no corre en Java mas nuevos que 22
+		{"arclight", "1.21.1", Requirement{Min: 21, Max: 22}},
+		{"arclight", "1.20.1", Requirement{Min: 17, Max: 22}},
+		// el tope de la era pre-1.17 ya es mas bajo y se respeta
+		{"arclight", "1.16.5", Requirement{Min: 8, Max: 11}},
+		// sin version reconocida no se valida nada
+		{"arclight", "snapshot", Requirement{}},
+	}
+
+	for _, c := range cases {
+		if got := RequireFor(c.loaderType, c.mcVersion); got != c.want {
+			t.Errorf("RequireFor(%q, %q) = %+v, want %+v", c.loaderType, c.mcVersion, got, c.want)
+		}
+	}
+
+	if RequireFor("arclight", "1.21.1").Satisfies(25) {
+		t.Error("Java 25 no debería servir para Arclight")
+	}
+}

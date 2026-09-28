@@ -54,6 +54,27 @@ func Require(mcVersion string) Requirement {
 	}
 }
 
+// loaderMaxJava pone tope a los loaders que no corren en Java nuevos aunque la
+// version de Minecraft si lo permita. Arclight avisa al arrancar que llega hasta
+// Java 22, y en Java 25 se cae apenas inicia
+var loaderMaxJava = map[string]int{
+	"arclight": 22,
+}
+
+// RequireFor es Require con el tope propio del loader, si tiene
+func RequireFor(loaderType, mcVersion string) Requirement {
+	req := Require(mcVersion)
+
+	maxMajor, capped := loaderMaxJava[loaderType]
+	if !capped || req.Min == 0 || req.Min > maxMajor {
+		return req
+	}
+	if req.Max == 0 || req.Max > maxMajor {
+		req.Max = maxMajor
+	}
+	return req
+}
+
 func (r Requirement) Satisfies(major int) bool {
 	if r.Min == 0 {
 		return true

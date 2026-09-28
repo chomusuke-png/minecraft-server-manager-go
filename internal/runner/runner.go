@@ -102,7 +102,7 @@ func (r *Runner) resolveJava(meta *instance.InstanceMeta) string {
 		logx.Info("Java por instancia: %s", javaPath)
 	}
 
-	requirement := java.Require(meta.MCVersion)
+	requirement := java.RequireFor(meta.LoaderType, meta.MCVersion)
 	if requirement.Min == 0 {
 		return javaPath
 	}
@@ -123,7 +123,7 @@ func (r *Runner) resolveJava(meta *instance.InstanceMeta) string {
 // una incompatibilidad de Java, y persiste la elección. Devuelve true si algo
 // cambió y vale la pena reintentar ya, sin esperar los 10 segundos.
 func (r *Runner) offerJavaFix(instanceDir string, meta *instance.InstanceMeta, javaPath string, sawMismatch bool, stdinLines <-chan string) bool {
-	requirement := java.Require(meta.MCVersion)
+	requirement := java.RequireFor(meta.LoaderType, meta.MCVersion)
 	if requirement.Min == 0 {
 		return false
 	}

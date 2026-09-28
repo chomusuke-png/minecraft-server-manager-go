@@ -63,7 +63,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader, javaPath string) err
 	updatedBackupKeepMin := instance.PromptBackupKeepMinUpdate(reader, meta.BackupKeepMin)
 	updatedTunnelProvider := instance.PromptTunnelProviderUpdate(reader, meta.TunnelProvider)
 
-	resolvedJava, err := java.Resolve(reader, java.Require(newVersion), preferredJava(meta, javaPath))
+	resolvedJava, err := java.Resolve(reader, java.RequireFor(newLoaderType, newVersion), preferredJava(meta, javaPath))
 	if err != nil {
 		return err
 	}
