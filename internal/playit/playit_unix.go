@@ -32,18 +32,19 @@ func launch(absolutePlayitPath string) (int, error) {
 	cmd := exec.Command(absolutePlayitPath, "--stdout")
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 
+	// a la consola llega solo lo importante (el link, la vinculacion, los
+	// errores) y el log guarda todo. Un solo writer para las dos salidas: exec
+	// usa entonces un unico pipe, y los filtros, que guardan estado entre
+	// llamadas, no se comparten entre dos goroutines
+	var output io.Writer = newConsoleFilter(os.Stdout)
 	logFile, logErr := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if logErr != nil {
 		logx.Warn("No se pudo abrir %s, su salida solo va a esta consola: %v", logPath, logErr)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
 	} else {
-		// un solo writer para las dos salidas: exec usa entonces un unico pipe,
-		// asi el filtro de colores no se comparte entre dos goroutines
-		output := io.MultiWriter(os.Stdout, &ansiStripper{w: logFile})
-		cmd.Stdout = output
-		cmd.Stderr = output
+		output = io.MultiWriter(output, &ansiStripper{w: logFile})
 	}
+	cmd.Stdout = output
+	cmd.Stderr = output
 
 	if err := cmd.Start(); err != nil {
 		if logFile != nil {
