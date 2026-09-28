@@ -1,5 +1,7 @@
 package downloader
 
+import "time"
+
 type MojangManifest struct {
 	Versions []MojangVersion `json:"versions"`
 }
@@ -57,6 +59,19 @@ type QuiltLoaderForMC struct {
 type QuiltInstaller struct {
 	Version string `json:"version"`
 	URL     string `json:"url"`
+}
+
+// ArclightListing es un directorio de la API de archivos de Arclight: las bases
+// de una version de Minecraft o las builds de un canal
+type ArclightListing struct {
+	Files []ArclightEntry `json:"files"`
+}
+
+type ArclightEntry struct {
+	Name         string    `json:"name"`
+	LastModified time.Time `json:"last-modified"`
+	// solo lo traen las builds, no los directorios
+	Permlink string `json:"permlink"`
 }
 
 type ForgePromotions struct {

@@ -45,6 +45,9 @@ func ChooseLoaderVersion(reader *bufio.Reader, loaderType, mcVersion, current st
 	if loaderType == "vanilla" {
 		return "", nil
 	}
+	if loaderType == "arclight" {
+		return chooseArclightVersion(reader, mcVersion, current)
+	}
 
 	label, ok := LoaderLabel(loaderType)
 	if !ok {
@@ -61,7 +64,7 @@ func ChooseLoaderVersion(reader *bufio.Reader, loaderType, mcVersion, current st
 }
 
 // loaderVersionResolvers tiene una entrada por cada loader con version propia,
-// o sea todos menos vanilla
+// o sea todos menos vanilla y arclight, que antes pregunta la base
 var loaderVersionResolvers = map[string]func(mcVersion string) (loaderVersions, error){
 	"paper":    paperVersions,
 	"fabric":   func(string) (loaderVersions, error) { return fabricVersions() },
@@ -278,6 +281,9 @@ func (d *Downloader) Install(loaderType, mcVersion, loaderVersion string) (strin
 		return d.DownloadForge(mcVersion, loaderVersion)
 	case "neoforge":
 		return d.DownloadNeoForge(mcVersion, loaderVersion)
+	case "arclight":
+		version, err := d.DownloadArclight(mcVersion, loaderVersion)
+		return version, nil, err
 	case "vanilla":
 		version, err := d.DownloadVanilla(mcVersion)
 		return version, nil, err

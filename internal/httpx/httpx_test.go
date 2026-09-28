@@ -3,6 +3,7 @@ package httpx
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -163,5 +164,19 @@ func TestGetTextFailsOnNon200(t *testing.T) {
 
 	if _, err := GetText(server.URL); err == nil {
 		t.Error("se esperaba error con status 404")
+	}
+}
+
+// hay APIs que responden 404 para un listado vacio, y quien llama tiene que
+// poder distinguirlo de un error de red
+func TestGetJSONNotFound(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	var target struct{}
+	if err := GetJSON(server.URL, &target); !errors.Is(err, ErrNotFound) {
+		t.Errorf("got %v, want ErrNotFound", err)
 	}
 }

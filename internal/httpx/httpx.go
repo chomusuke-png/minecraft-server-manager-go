@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -16,6 +17,10 @@ import (
 
 	"minecraft-manager/internal/logx"
 )
+
+// ErrNotFound distingue un 404 de un error de red: hay APIs que lo usan para
+// decir que un listado esta vacio
+var ErrNotFound = errors.New("la API respondió con estado 404")
 
 func Download(url string, destinationPath string) error {
 	return DownloadVerified(url, destinationPath, "", "")
@@ -104,6 +109,9 @@ func GetJSON(url string, target interface{}) error {
 	}
 	defer response.Body.Close()
 
+	if response.StatusCode == http.StatusNotFound {
+		return ErrNotFound
+	}
 	if response.StatusCode != http.StatusOK {
 		return fmt.Errorf("la API respondió con estado %d", response.StatusCode)
 	}

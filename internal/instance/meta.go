@@ -8,9 +8,9 @@ import (
 )
 
 type InstanceMeta struct {
-	LoaderType     string   `json:"loader_type"`               // "paper", "fabric", "quilt", "forge", "neoforge", "vanilla"
+	LoaderType     string   `json:"loader_type"`               // "paper", "fabric", "quilt", "forge", "neoforge", "arclight", "vanilla"
 	MCVersion      string   `json:"mc_version"`                //
-	LoaderVersion  string   `json:"loader_version,omitempty"`  // build de Paper, versión de loader de Fabric/Quilt/Forge/NeoForge; vacío en Vanilla
+	LoaderVersion  string   `json:"loader_version,omitempty"`  // build de Paper, versión de loader de Fabric/Quilt/Forge/NeoForge, <base>-<versión> en Arclight; vacío en Vanilla
 	RAMGB          int      `json:"ram_gb,omitempty"`          // 0 = usar el valor global de config.json
 	LaunchArgs     []string `json:"launch_args,omitempty"`     // reemplaza el ejecutable de arranque si el loader no produce su .jar
 	JavaPath       string   `json:"java_path,omitempty"`       // pisa el path de java por si la instalacion requiere otra version

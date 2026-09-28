@@ -18,8 +18,8 @@ func TestLoaderByChoice(t *testing.T) {
 		ok    bool
 	}{
 		{"1", "paper", true},
-		{"6", "vanilla", true},
-		{"7", "", false},
+		{"7", "vanilla", true},
+		{"8", "", false},
 		{"0", "", false},
 		{"-1", "", false},
 		{"", "", false},
@@ -36,7 +36,7 @@ func TestLoaderByChoice(t *testing.T) {
 
 // los menus numeran a partir de Loaders, asi que el orden es parte del contrato
 func TestLoadersMantieneElOrdenDeLosMenus(t *testing.T) {
-	want := []string{"paper", "fabric", "quilt", "forge", "neoforge", "vanilla"}
+	want := []string{"paper", "fabric", "quilt", "forge", "neoforge", "arclight", "vanilla"}
 
 	if len(Loaders) != len(want) {
 		t.Fatalf("hay %d loaders, se esperaban %d", len(Loaders), len(want))
@@ -49,10 +49,11 @@ func TestLoadersMantieneElOrdenDeLosMenus(t *testing.T) {
 }
 
 // si se suma un loader nuevo hay que darle tambien su resolver de versiones,
-// salvo que sea como vanilla y no tenga version propia
+// salvo que sea como vanilla y no tenga version propia, o que como arclight
+// tenga su propio flujo para elegirla
 func TestTodosLosLoadersTienenResolver(t *testing.T) {
 	for _, loader := range Loaders {
-		if loader.Type == "vanilla" {
+		if loader.Type == "vanilla" || loader.Type == "arclight" {
 			continue
 		}
 		if _, ok := loaderVersionResolvers[loader.Type]; !ok {

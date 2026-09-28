@@ -18,6 +18,7 @@ var Loaders = []Loader{
 	{Type: "quilt", Label: "Quilt"},
 	{Type: "forge", Label: "Forge"},
 	{Type: "neoforge", Label: "NeoForge"},
+	{Type: "arclight", Label: "Arclight"},
 	{Type: "vanilla", Label: "Vanilla"},
 }
 
