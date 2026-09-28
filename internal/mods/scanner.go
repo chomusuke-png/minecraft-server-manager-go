@@ -90,45 +90,77 @@ func disableMod(modFilePath string) bool {
 	return true
 }
 
+// QuiltModMetadata es la parte de quilt.mod.json que dice de que lado corre el
+// mod. Quilt usa "dedicated_server" donde Fabric usa "server"
+type QuiltModMetadata struct {
+	Minecraft struct {
+		Environment string `json:"environment"`
+	} `json:"minecraft"`
+}
+
 func getModEnvironment(jarPath string) (string, error) {
+	// quilt.mod.json va primero: un mod que trae los dos descriptores lo carga
+	// Quilt con el suyo
+	if env, err := getQuiltModEnvironment(jarPath); err == nil {
+		return env, nil
+	}
 	if env, err := getFabricModEnvironment(jarPath); err == nil {
 		return env, nil
 	}
 	return getForgeModEnvironment(jarPath)
 }
 
-func getFabricModEnvironment(jarPath string) (string, error) {
-	zipReader, err := zip.OpenReader(jarPath)
+func getQuiltModEnvironment(jarPath string) (string, error) {
+	content, err := readJarEntry(jarPath, "quilt.mod.json")
 	if err != nil {
 		return "", err
+	}
+
+	var meta QuiltModMetadata
+	if err := json.Unmarshal(content, &meta); err != nil {
+		return "", err
+	}
+
+	if meta.Minecraft.Environment == "" {
+		return "*", nil
+	}
+	return meta.Minecraft.Environment, nil
+}
+
+func readJarEntry(jarPath, name string) ([]byte, error) {
+	zipReader, err := zip.OpenReader(jarPath)
+	if err != nil {
+		return nil, err
 	}
 	defer zipReader.Close()
 
 	for _, zipEntry := range zipReader.File {
-		if zipEntry.Name == "fabric.mod.json" {
-			entryReader, err := zipEntry.Open()
-			if err != nil {
-				return "", err
-			}
-			defer entryReader.Close()
-
-			content, err := io.ReadAll(entryReader)
-			if err != nil {
-				return "", err
-			}
-
-			var meta FabricModMetadata
-			if err := json.Unmarshal(content, &meta); err != nil {
-				return "", err
-			}
-
-			if meta.Environment == "" {
-				return "*", nil
-			}
-
-			return meta.Environment, nil
+		if zipEntry.Name != name {
+			continue
 		}
+		entryReader, err := zipEntry.Open()
+		if err != nil {
+			return nil, err
+		}
+		defer entryReader.Close()
+		return io.ReadAll(entryReader)
+	}
+	return nil, fmt.Errorf("%s no encontrado", name)
+}
+
+func getFabricModEnvironment(jarPath string) (string, error) {
+	content, err := readJarEntry(jarPath, "fabric.mod.json")
+	if err != nil {
+		return "", err
 	}
 
-	return "", fmt.Errorf("fabric.mod.json no encontrado")
+	var meta FabricModMetadata
+	if err := json.Unmarshal(content, &meta); err != nil {
+		return "", err
+	}
+
+	if meta.Environment == "" {
+		return "*", nil
+	}
+	return meta.Environment, nil
 }
