@@ -1,6 +1,9 @@
 package downloader
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestLoaderLabel(t *testing.T) {
 	if got, ok := LoaderLabel("neoforge"); !ok || got != "NeoForge" {
@@ -65,5 +68,30 @@ func TestTodosLosLoadersTienenResolver(t *testing.T) {
 		if _, ok := LoaderLabel(loaderType); !ok {
 			t.Errorf("%s tiene resolver pero no está en Loaders", loaderType)
 		}
+	}
+}
+
+func TestTodosLosLoadersDicenQueAceptan(t *testing.T) {
+	for _, loader := range Loaders {
+		if loader.Supports == "" {
+			t.Errorf("%s no dice si acepta plugins o mods", loader.Type)
+		}
+	}
+}
+
+func TestLoaderOptionsAlineaLaColumna(t *testing.T) {
+	lines := strings.Split(strings.TrimSuffix(loaderOptions("  "), "\n"), "\n")
+	if len(lines) != len(Loaders) {
+		t.Fatalf("se esperaban %d líneas, got %d", len(Loaders), len(lines))
+	}
+
+	column := strings.Index(lines[0], Loaders[0].Supports)
+	for i, line := range lines {
+		if got := strings.Index(line, Loaders[i].Supports); got != column {
+			t.Errorf("línea %d: la descripción empieza en %d, want %d: %q", i+1, got, column, line)
+		}
+	}
+	if lines[5] != "  6) Arclight   plugins y mods" {
+		t.Errorf("línea de Arclight = %q", lines[5])
 	}
 }

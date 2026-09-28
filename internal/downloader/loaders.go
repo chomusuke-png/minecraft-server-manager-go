@@ -3,6 +3,7 @@ package downloader
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 // Loader es un tipo de servidor que la herramienta sabe instalar. El orden de
@@ -10,16 +11,18 @@ import (
 type Loader struct {
 	Type  string
 	Label string
+	// Supports dice que acepta el servidor, para poder elegir sin conocer el loader
+	Supports string
 }
 
 var Loaders = []Loader{
-	{Type: "paper", Label: "Paper"},
-	{Type: "fabric", Label: "Fabric"},
-	{Type: "quilt", Label: "Quilt"},
-	{Type: "forge", Label: "Forge"},
-	{Type: "neoforge", Label: "NeoForge"},
-	{Type: "arclight", Label: "Arclight"},
-	{Type: "vanilla", Label: "Vanilla"},
+	{Type: "paper", Label: "Paper", Supports: "plugins"},
+	{Type: "fabric", Label: "Fabric", Supports: "mods"},
+	{Type: "quilt", Label: "Quilt", Supports: "mods (también de Fabric)"},
+	{Type: "forge", Label: "Forge", Supports: "mods"},
+	{Type: "neoforge", Label: "NeoForge", Supports: "mods"},
+	{Type: "arclight", Label: "Arclight", Supports: "plugins y mods"},
+	{Type: "vanilla", Label: "Vanilla", Supports: "sin plugins ni mods"},
 }
 
 // LoaderLabel devuelve el nombre para mostrar de un loader
@@ -41,9 +44,21 @@ func LoaderByChoice(input string) (string, bool) {
 	return Loaders[index-1].Type, true
 }
 
-// PrintLoaderOptions imprime la lista numerada de loaders
+// PrintLoaderOptions imprime la lista numerada de loaders, con lo que acepta
+// cada uno en una columna alineada
 func PrintLoaderOptions(indent string) {
-	for i, loader := range Loaders {
-		fmt.Printf("%s%d) %s\n", indent, i+1, loader.Label)
+	fmt.Print(loaderOptions(indent))
+}
+
+func loaderOptions(indent string) string {
+	width := 0
+	for _, loader := range Loaders {
+		width = max(width, len(loader.Label))
 	}
+
+	var options strings.Builder
+	for i, loader := range Loaders {
+		fmt.Fprintf(&options, "%s%d) %-*s   %s\n", indent, i+1, width, loader.Label, loader.Supports)
+	}
+	return options.String()
 }
