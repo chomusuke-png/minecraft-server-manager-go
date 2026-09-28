@@ -15,7 +15,7 @@ func TestLoopRetriesUntilAccepted(t *testing.T) {
 		if input == "bien" {
 			return input, true, ""
 		}
-		return "", false, "reintentá"
+		return "", false, "reintenta"
 	})
 	if !ok || got != "bien" {
 		t.Errorf("got (%q, %v)", got, ok)

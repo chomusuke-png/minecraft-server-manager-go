@@ -224,7 +224,7 @@ func promptLoaderVersion(reader *bufio.Reader, label string, available loaderVer
 	choice := prompt.LoopDefault(reader, promptText, 1, func(input string) (int, bool, string) {
 		value, err := strconv.Atoi(input)
 		if err != nil || value < 1 || value > cancelOption {
-			return 0, false, fmt.Sprintf("Opción inválida. Elegí un número entre 1 y %d.", cancelOption)
+			return 0, false, fmt.Sprintf("Opción inválida. Elige un número entre 1 y %d.", cancelOption)
 		}
 		return value, true, ""
 	})
@@ -247,7 +247,7 @@ func promptCustomVersion(reader *bufio.Reader, label string, available loaderVer
 
 	version, ok := prompt.Loop(reader, promptText, func(input string) (string, bool, string) {
 		if input == "" {
-			return "", false, "Ingresá una versión."
+			return "", false, "Ingresa una versión."
 		}
 		if len(available.known) > 0 && !slices.Contains(available.known, input) {
 			return "", false, fmt.Sprintf("%s no publicó esa versión para esta versión de Minecraft.", label)

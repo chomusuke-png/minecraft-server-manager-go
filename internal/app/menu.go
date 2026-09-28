@@ -180,7 +180,7 @@ func clearScreen() {
 }
 
 func selectExistingInstance(reader *bufio.Reader, instances []string, purpose string) string {
-	fmt.Printf("\n[?] Seleccioná la instancia a %s:\n", purpose)
+	fmt.Printf("\n[?] Selecciona la instancia a %s:\n", purpose)
 	printInstanceTable(instances, "  ")
 
 	path, ok := prompt.Loop(reader, "[?] Opción: ", func(input string) (string, bool, string) {

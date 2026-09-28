@@ -228,7 +228,7 @@ func (r *Runner) verifyLaunchTarget(instanceDir string, meta *instance.InstanceM
 		argFile := filepath.Join(instanceDir, filepath.FromSlash(strings.TrimPrefix(arg, "@")))
 		if _, err := os.Stat(argFile); err != nil {
 			return fmt.Errorf(
-				"falta '%s', requerido por launch_args de instance.json.\nReinstalá el loader desde el menú de actualización",
+				"falta '%s', requerido por launch_args de instance.json.\nReinstala el loader desde el menú de actualización",
 				argFile,
 			)
 		}

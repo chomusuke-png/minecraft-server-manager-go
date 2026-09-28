@@ -16,7 +16,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader, javaPath string) err
 	meta, err := instance.LoadMeta(instanceDir)
 	if err != nil {
 		return fmt.Errorf(
-			"instancia sin metadata: %w\nTip: las instancias creadas antes de esta versión no tienen instance.json.\nPodés crearlo manualmente con el formato: {\"loader_type\": \"paper\", \"mc_version\": \"1.20.1\", \"ram_gb\": 4}",
+			"instancia sin metadata: %w\nTip: las instancias creadas antes de esta versión no tienen instance.json.\nPuedes crearlo manualmente con el formato: {\"loader_type\": \"paper\", \"mc_version\": \"1.20.1\", \"ram_gb\": 4}",
 			err,
 		)
 	}
@@ -25,7 +25,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader, javaPath string) err
 		return fmt.Errorf(
 			"metadata incompleta: loader_type='%s', mc_version='%s'\n"+
 				"La instancia puede haberse creado sin completar la descarga del JAR.\n"+
-				"Editá instance.json manualmente o eliminá la instancia y volvé a crearla.",
+				"Edita instance.json manualmente o elimina la instancia y vuelve a crearla.",
 			meta.LoaderType, meta.MCVersion,
 		)
 	}

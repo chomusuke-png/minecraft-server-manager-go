@@ -81,7 +81,7 @@ func promptRAM(reader *bufio.Reader, defaultValue int) int {
 	return prompt.LoopDefault(reader, promptText, defaultValue, func(input string) (int, bool, string) {
 		value, err := strconv.Atoi(input)
 		if err != nil || value <= 0 {
-			return 0, false, "Error: ingresá un número entero válido mayor a 0."
+			return 0, false, "Error: ingresa un número entero válido mayor a 0."
 		}
 		return value, true, ""
 	})
@@ -91,14 +91,14 @@ func DeleteInstance(reader *bufio.Reader, instancePath string) error {
 	name := filepath.Base(instancePath)
 
 	logx.Warn("\nEsto borra '%s' por completo (mundo, backups, todo). No se puede deshacer.", instancePath)
-	confirmed, ok := prompt.Loop(reader, fmt.Sprintf("[?] Escribí '%s' para confirmar (Enter para cancelar): ", name), func(input string) (bool, bool, string) {
+	confirmed, ok := prompt.Loop(reader, fmt.Sprintf("[?] Escribe '%s' para confirmar (Enter para cancelar): ", name), func(input string) (bool, bool, string) {
 		if input == "" {
 			return false, true, ""
 		}
 		if input == name {
 			return true, true, ""
 		}
-		return false, false, "No coincide, reintentá (o Enter para cancelar)."
+		return false, false, "No coincide, reintenta (o Enter para cancelar)."
 	})
 	if !ok || !confirmed {
 		logx.Info("Cancelado, no se borró nada.")
@@ -203,7 +203,7 @@ func PromptRAMUpdate(reader *bufio.Reader, current int) int {
 	return prompt.LoopDefault(reader, promptText, current, func(input string) (int, bool, string) {
 		value, err := strconv.Atoi(input)
 		if err != nil || value <= 0 {
-			return 0, false, "Valor inválido, ingresá un número entero mayor a 0."
+			return 0, false, "Valor inválido, ingresa un número entero mayor a 0."
 		}
 		return value, true, ""
 	})
@@ -260,7 +260,7 @@ func PromptBackupKeepMinUpdate(reader *bufio.Reader, current int) int {
 	return prompt.LoopDefault(reader, promptText, current, func(input string) (int, bool, string) {
 		value, err := strconv.Atoi(input)
 		if err != nil || value < 0 {
-			return 0, false, "Valor inválido, ingresá un número entero mayor o igual a 0."
+			return 0, false, "Valor inválido, ingresa un número entero mayor o igual a 0."
 		}
 		return value, true, ""
 	})

@@ -26,7 +26,7 @@ func checkForUpdates(reader *bufio.Reader, cfg *config.Config, version string) {
 		return
 	}
 
-	logx.Info("\nHay una versión nueva disponible: %s (tenés %s).", rel.Tag, version)
+	logx.Info("\nHay una versión nueva disponible: %s (tienes %s).", rel.Tag, version)
 	if !prompt.YesNo(reader, "[?] ¿Actualizar ahora?") {
 		return
 	}
@@ -37,7 +37,7 @@ func checkForUpdates(reader *bufio.Reader, cfg *config.Config, version string) {
 		return
 	}
 
-	logx.Success("Actualizado a %s. Volvé a ejecutar la herramienta.", rel.Tag)
+	logx.Success("Actualizado a %s. Vuelve a ejecutar la herramienta.", rel.Tag)
 	os.Exit(0)
 }
 

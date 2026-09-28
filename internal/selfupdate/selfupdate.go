@@ -73,7 +73,7 @@ func parseVersion(tag string) (major, minor, patch int, ok bool) {
 // assetName devuelve el nombre del binario que corresponde a este SO
 func assetName() (string, error) {
 	if runtime.GOARCH != "amd64" {
-		return "", fmt.Errorf("no hay build automática de msm para %s/%s, compilá desde el código fuente", runtime.GOOS, runtime.GOARCH)
+		return "", fmt.Errorf("no hay build automática de msm para %s/%s, compila desde el código fuente", runtime.GOOS, runtime.GOARCH)
 	}
 
 	switch runtime.GOOS {

@@ -4,38 +4,38 @@
 
 Herramienta de línea de comandos (Windows y Linux) que administra servidores de Minecraft: crea instancias, descarga automáticamente el loader que elijas (Paper, Fabric, Forge, NeoForge o Vanilla), resuelve el Java correcto para cada versión, hace backups del mundo, reinicia el servidor si se cae, y puede exponerlo a internet con un túnel ([Playit.gg](https://playit.gg) o [ngrok](https://ngrok.com), a elección por instancia) sin que tengas que abrir puertos en tu router.
 
-No hace falta tener Go instalado para usarla — descargá el ejecutable ya compilado para Windows o Linux.
+No hace falta tener Go instalado para usarla — descarga el ejecutable ya compilado para Windows o Linux.
 
 ## Descarga
 
-Andá a la sección [Releases](../../releases) de este repositorio y descargá el binario de tu plataforma (`.exe` en Windows, sin extensión en Linux) de la última versión. Poné ese archivo solo, en una carpeta vacía dedicada (el programa va a crear ahí mismo `config.json`, `instances/`, `runtimes/` y `backups/` — conviene que no comparta carpeta con otra cosa).
+Ve a la sección [Releases](../../releases) de este repositorio y descarga el binario de tu plataforma (`.exe` en Windows, sin extensión en Linux) de la última versión. Pon ese archivo solo, en una carpeta vacía dedicada (el programa va a crear ahí mismo `config.json`, `instances/`, `runtimes/` y `backups/` — conviene que no comparta carpeta con otra cosa).
 
 ## Requisitos
 
 - Windows o Linux (amd64/arm64). El resto de la administración del servidor (arrancar, backups, mods, EULA) es igual en los dos; lo único que cambia por SO es cómo se maneja el proceso del túnel por debajo.
 - Conexión a internet la primera vez que crees o actualices una instancia (para descargar el jar del servidor y, si hace falta, un runtime de Java).
 - Java **no es obligatorio tenerlo instalado de antemano**: si no hay uno compatible, el programa te ofrece descargar automáticamente el JDK correcto para esa versión de Minecraft (Windows y Linux, amd64/arm64).
-- El túnel es opcional y se elige por instancia (Playit, ngrok o ninguno), solo si querés exponer el server a internet sin abrir puertos en tu router:
+- El túnel es opcional y se elige por instancia (Playit, ngrok o ninguno), solo si quieres exponer el server a internet sin abrir puertos en tu router:
   - **[Playit](https://playit.gg/download)** (recomendado): el programa te ofrece descargarlo solo (`playit.exe` en Windows, binario `playit` en Linux). No necesita cuenta pre-configurada — al arrancar por primera vez te muestra un link para vincularlo a tu cuenta. En Linux no abre una ventana propia como en Windows: su salida sale en la misma consola del servidor, filtrada para no taparla — sólo aparecen el link de vinculación (una vez), la confirmación de que quedó vinculado, cuántos túneles hay activos cuando cambia, y los errores. La salida completa queda en `playit.log`, en la carpeta del programa y sin los códigos de color. Si el link de vinculación se te fue de pantalla, puedes sacarlo de ahí con `grep -o 'https://playit.gg/claim/[^ ]*' playit.log | tail -1`.
-  - **[ngrok](https://ngrok.com/download)**: a diferencia de Playit, siempre necesita una cuenta y un token — sacalo de [dashboard.ngrok.com/get-started/your-authtoken](https://dashboard.ngrok.com/get-started/your-authtoken) y ponelo en `ngrok_authtoken` dentro de `config.json` antes de usarlo. Cada instancia que lo use lanza su propio proceso (a diferencia de Playit, que comparte uno solo); la URL pública queda en `ngrok.log` dentro de la instancia y también se imprime en consola al arrancar.
+  - **[ngrok](https://ngrok.com/download)**: a diferencia de Playit, siempre necesita una cuenta y un token — sácalo de [dashboard.ngrok.com/get-started/your-authtoken](https://dashboard.ngrok.com/get-started/your-authtoken) y ponlo en `ngrok_authtoken` dentro de `config.json` antes de usarlo. Cada instancia que lo use lanza su propio proceso (a diferencia de Playit, que comparte uno solo); la URL pública queda en `ngrok.log` dentro de la instancia y también se imprime en consola al arrancar.
 
 ## Primer uso
 
-1. Ejecutá el `.exe`. La primera vez se crea un `config.json` con valores por defecto (más abajo se explica qué es cada campo).
-2. Vas a ver el selector de instancias. Como todavía no hay ninguna, elegí `C` para crear una.
+1. Ejecuta el `.exe`. La primera vez se crea un `config.json` con valores por defecto (más abajo se explica qué es cada campo).
+2. Vas a ver el selector de instancias. Como todavía no hay ninguna, elige `C` para crear una.
 3. Te va a pedir:
    - **Nombre** de la instancia (sin espacios, se usa como nombre de carpeta).
    - **RAM** asignada en GB (Enter para usar el valor por defecto de `config.json`).
    - **Túnel**: Playit (recomendado, Enter), ngrok o ninguno.
-4. Como todavía no tiene el jar del servidor, te pregunta si querés descargarlo automáticamente. Si decís que sí:
+4. Como todavía no tiene el jar del servidor, te pregunta si quieres descargarlo automáticamente. Si dices que sí:
    - Versión de Minecraft (ej. `1.20.1`).
    - Tipo de servidor: **Paper**, **Fabric**, **Forge**, **NeoForge** o **Vanilla**.
-   - Versión del loader: se consulta qué hay publicado para esa versión de Minecraft y podés elegir la **más reciente**, la **estable** o escribir una en particular. Vanilla no pregunta nada porque no tiene versión propia. Qué significa cada opción según el loader: en Paper es el número de build (estable = canal `default`), en Fabric la versión del loader (el instalador siempre es el estable), en Forge lo que publica como `latest` y `recommended`, y en NeoForge la última del maven contra la última sin `-beta`/`-alpha`.
-   - Si el Java que tenés no es compatible con esa versión, te ofrece conseguir uno (descarga automática de [Adoptium](https://adoptium.net/) o indicar la ruta a un Java que ya tengas instalado).
-5. Configurás `server.properties` la primera vez: MOTD, dificultad, tipo de mundo (normal, plano, biomas grandes o amplificado), jugadores máximos, `online-mode` y **puerto**. Todo con Enter para aceptar el valor por defecto que se muestra entre corchetes.
+   - Versión del loader: se consulta qué hay publicado para esa versión de Minecraft y puedes elegir la **más reciente**, la **estable** o escribir una en particular. Vanilla no pregunta nada porque no tiene versión propia. Qué significa cada opción según el loader: en Paper es el número de build (estable = canal `default`), en Fabric la versión del loader (el instalador siempre es el estable), en Forge lo que publica como `latest` y `recommended`, y en NeoForge la última del maven contra la última sin `-beta`/`-alpha`.
+   - Si el Java que tienes no es compatible con esa versión, te ofrece conseguir uno (descarga automática de [Adoptium](https://adoptium.net/) o indicar la ruta a un Java que ya tengas instalado).
+5. Configuras `server.properties` la primera vez: MOTD, dificultad, tipo de mundo (normal, plano, biomas grandes o amplificado), jugadores máximos, `online-mode` y **puerto**. Todo con Enter para aceptar el valor por defecto que se muestra entre corchetes.
 6. Si la instancia usa un túnel (o aceptaste descargarlo), se lanza. Con Playit, en Windows en su propia ventana y en Linux en la misma consola (logueado en `playit.log`). Con ngrok, la URL pública se imprime en consola y queda en `ngrok.log` dentro de la instancia.
-7. Aceptás el EULA de Mojang (obligatorio para que el servidor arranque).
-8. El servidor arranca. Podés escribir comandos de consola de Minecraft directamente en esa misma terminal (`stop`, `say hola`, etc.) — se reenvían al proceso del servidor. `Ctrl+C` hace un apagado prolijo (guarda el mundo antes de cerrar).
+7. Aceptas el EULA de Mojang (obligatorio para que el servidor arranque).
+8. El servidor arranca. Puedes escribir comandos de consola de Minecraft directamente en esa misma terminal (`stop`, `say hola`, etc.) — se reenvían al proceso del servidor. `Ctrl+C` hace un apagado prolijo (guarda el mundo antes de cerrar).
 
 ## El menú principal
 
@@ -60,7 +60,7 @@ Andá a la sección [Releases](../../releases) de este repositorio y descargá e
 
 - Un número selecciona esa instancia y la arranca.
 - `C` crea una instancia nueva.
-- `U` te deja elegir una instancia existente y cambiarle la versión de Minecraft, el tipo de loader, la versión del loader, la RAM, el puerto, el túnel y el mínimo de backups a conservar, sin tener que borrarla y crearla de nuevo. En el menú de versión del loader aparece primero `Mantener la actual`, que es lo que toma si apretás Enter; sólo se ofrece si no cambiaste ni el loader ni la versión de Minecraft, porque en ese caso la versión vieja ya no aplica.
+- `U` te deja elegir una instancia existente y cambiarle la versión de Minecraft, el tipo de loader, la versión del loader, la RAM, el puerto, el túnel y el mínimo de backups a conservar, sin tener que borrarla y crearla de nuevo. En el menú de versión del loader aparece primero `Mantener la actual`, que es lo que toma si presionas Enter; sólo se ofrece si no cambiaste ni el loader ni la versión de Minecraft, porque en ese caso la versión vieja ya no aplica.
 - `D` te deja elegir una instancia y borrarla por completo (mundo, backups, todo). Pide escribir el nombre exacto para confirmar; cualquier otra cosa (o Enter en blanco) cancela sin tocar nada.
 - `Q` sale del programa.
 
@@ -87,13 +87,13 @@ Cada instancia puede pisar su propia RAM, puerto, versión de Java, mínimo de b
 - **Backups**: antes de cada arranque, si la instancia ya tiene mundo, comprime todas las carpetas de dimensión que existan (`world`, `world_nether`, `world_the_end`) en un único zip dentro de `backups/<instancia>/`. Los backups más viejos que `backup_retention_days` se borran solos, pero nunca se baja del piso mínimo `backup_keep_min` (por instancia o global), sin importar la antigüedad.
 - **Mods client-only**: escanea la carpeta `mods/` y deshabilita (`.jar` → `.jar.disabled`) los mods marcados como exclusivos de cliente, para que no rompan el arranque del servidor. En Fabric usa el campo `environment` de `fabric.mod.json`. En Forge y NeoForge no existe un campo oficial equivalente: se usa la misma convención que herramientas como ServerPackCreator, un mod que se autodeclara como su propia dependencia con `side="CLIENT"` en `mods.toml`/`neoforge.mods.toml`. Sin esa autodeclaración no hay forma confiable de saberlo, así que esos mods se dejan sin tocar. Si algún mod se detecta mal, se puede proteger agregándolo a `mods_whitelist.txt` (se genera solo en la raíz de la instancia): un nombre de archivo `.jar` por línea, con o sin extensión, sin importar mayúsculas. Para el caso inverso —un mod de cliente que no se autodeclara y por eso no se detecta— está `mods_blacklist.txt`, con el mismo formato: lo que listes ahí se deshabilita siempre, sin mirar el `.jar`. Si un mod aparece en las dos listas, gana la whitelist.
 - **Recuperar instancias Forge y NeoForge**: desde Forge 1.17, y en todo NeoForge, el instalador no deja un `server.jar`; el comando de arranque se guarda en `instance.json`. Si ese archivo se pierde, o queda sin el comando, al arrancar la instancia el programa busca la instalación en disco —primero en el `run.bat`/`run.sh` que dejó el instalador y, si no hay, en `libraries/`—, te muestra qué encontró y te pregunta si reconstruir el `instance.json`. Se recuperan el loader, las versiones y el comando de arranque; la RAM, el túnel y el mínimo de backups quedan como estuvieran en el `instance.json`, o con los valores globales si no existía. Si hay más de una versión instalada y ningún script que diga cuál es la actual, no adivina: sigue con el flujo de siempre, que ofrece reinstalar.
-- **Reinicio automático**: si el servidor se cae de forma abrupta (no por vos), se reinicia solo a los 10 segundos (cancelable con `Ctrl+C`). Si detecta que el problema fue una versión de Java incompatible, te ofrece resolverlo ahí mismo antes de reintentar.
-- **Túnel**: se elige por instancia (`tunnel_provider` en `instance.json`, editable desde el menú de actualización). Sin ese campo (instancias creadas antes de que existiera esta opción) se sigue tratando como Playit, para no cambiar el comportamiento que ya tenían. Con Playit, si tenés el binario configurado, se comparte un único agente entre todas las instancias que lo usen al mismo tiempo — no se abre uno por cada servidor, y se cierra solo cuando cerrás la última instancia que lo estaba usando. Con ngrok cada instancia lanza su propio proceso, porque el puerto se le pasa por línea de comandos en cada arranque en vez de configurarse del lado de la cuenta como en Playit.
-- **Actualización de la herramienta**: al arrancar, chequea contra los [Releases](../../releases) de este repositorio si hay una versión más nueva. Si la hay, pregunta antes de hacer nada; si aceptás, descarga el binario correspondiente (verificando su checksum contra el digest que publica GitHub) y lo deja instalado en el lugar del actual — el ejecutable viejo queda al lado como `.old` por si el nuevo no arranca. Hace falta reiniciar la herramienta para que tome el cambio. Se puede desactivar con `disable_update_check`. Una build compilada a mano sin el flag de versión (ver más abajo) nunca chequea, porque no tiene con qué comparar.
+- **Reinicio automático**: si el servidor se cae de forma abrupta (no por ti), se reinicia solo a los 10 segundos (cancelable con `Ctrl+C`). Si detecta que el problema fue una versión de Java incompatible, te ofrece resolverlo ahí mismo antes de reintentar.
+- **Túnel**: se elige por instancia (`tunnel_provider` en `instance.json`, editable desde el menú de actualización). Sin ese campo (instancias creadas antes de que existiera esta opción) se sigue tratando como Playit, para no cambiar el comportamiento que ya tenían. Con Playit, si tienes el binario configurado, se comparte un único agente entre todas las instancias que lo usen al mismo tiempo — no se abre uno por cada servidor, y se cierra solo cuando cierras la última instancia que lo estaba usando. Con ngrok cada instancia lanza su propio proceso, porque el puerto se le pasa por línea de comandos en cada arranque en vez de configurarse del lado de la cuenta como en Playit.
+- **Actualización de la herramienta**: al arrancar, chequea contra los [Releases](../../releases) de este repositorio si hay una versión más nueva. Si la hay, pregunta antes de hacer nada; si aceptas, descarga el binario correspondiente (verificando su checksum contra el digest que publica GitHub) y lo deja instalado en el lugar del actual — el ejecutable viejo queda al lado como `.old` por si el nuevo no arranca. Hace falta reiniciar la herramienta para que tome el cambio. Se puede desactivar con `disable_update_check`. Una build compilada a mano sin el flag de versión (ver más abajo) nunca chequea, porque no tiene con qué comparar.
 
 ## Compilar desde el código fuente
 
-Necesitás [Go 1.27+](https://go.dev/dl/):
+Necesitas [Go 1.27+](https://go.dev/dl/):
 
 ```bash
 # Windows
@@ -113,7 +113,7 @@ Una build así queda identificada como `dev` y nunca va a ofrecer actualizarse s
 go build -ldflags "-X main.version=vx.x.x" -o builds/msm-windows-amd64.exe ./cmd
 ```
 
-El ícono del `.exe` viene de `cmd/rsrc_windows_amd64.syso`, que está versionado y `go build` enlaza solo al compilar para Windows, así que no hace falta nada extra. Sólo hay que regenerarlo si cambiás el ícono en `winres/`:
+El ícono del `.exe` viene de `cmd/rsrc_windows_amd64.syso`, que está versionado y `go build` enlaza solo al compilar para Windows, así que no hace falta nada extra. Sólo hay que regenerarlo si cambias el ícono en `winres/`:
 
 ```bash
 go install github.com/tc-hib/go-winres@latest

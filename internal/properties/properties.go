@@ -79,7 +79,7 @@ func promptDifficulty(reader *bufio.Reader) (difficulty string, hardcore bool) {
 	choice := prompt.LoopDefault(reader, promptText, defaultDifficultyChoice, func(input string) (int, bool, string) {
 		value, err := strconv.Atoi(input)
 		if err != nil || value < 1 || value > len(difficultyOptions) {
-			return 0, false, fmt.Sprintf("Opción inválida. Elegí un número entre 1 y %d.", len(difficultyOptions))
+			return 0, false, fmt.Sprintf("Opción inválida. Elige un número entre 1 y %d.", len(difficultyOptions))
 		}
 		return value, true, ""
 	})
@@ -122,7 +122,7 @@ func promptPort(reader *bufio.Reader, message string, defaultValue int) int {
 	return prompt.LoopDefault(reader, promptText, defaultValue, func(input string) (int, bool, string) {
 		value, err := strconv.Atoi(input)
 		if err != nil || value <= 0 || value > 65535 {
-			return 0, false, "Error: ingresá un puerto válido (1-65535)."
+			return 0, false, "Error: ingresa un puerto válido (1-65535)."
 		}
 		return value, true, ""
 	})

@@ -152,7 +152,7 @@ type Tunnel struct {
 func Start(instanceDir, ngrokPath, authToken string, localPort int) (*Tunnel, error) {
 	if authToken == "" {
 		return nil, fmt.Errorf(
-			"falta ngrok_authtoken en config.json (conseguí uno en https://dashboard.ngrok.com/get-started/your-authtoken)",
+			"falta ngrok_authtoken en config.json (consigue uno en https://dashboard.ngrok.com/get-started/your-authtoken)",
 		)
 	}
 
@@ -252,5 +252,5 @@ func waitForPublicURL(webPort int, timeout time.Duration) (string, error) {
 		time.Sleep(400 * time.Millisecond)
 	}
 
-	return "", fmt.Errorf("ngrok no levantó el túnel a tiempo (revisá ngrok.log en la instancia)")
+	return "", fmt.Errorf("ngrok no levantó el túnel a tiempo (revisa ngrok.log en la instancia)")
 }
