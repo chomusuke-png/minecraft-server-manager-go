@@ -1,6 +1,12 @@
 package java
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"minecraft-manager/internal/approot"
+)
 
 func TestRequire(t *testing.T) {
 	cases := []struct {
@@ -157,5 +163,68 @@ func TestRequireFor(t *testing.T) {
 
 	if RequireFor("arclight", "1.21.1").Satisfies(25) {
 		t.Error("Java 25 no debería servir para Arclight")
+	}
+}
+
+func TestPortable(t *testing.T) {
+	root, err := filepath.Abs(approot.Dir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	inside := filepath.Join(root, "runtimes", "jdk-17", "jdk-17.0.20+8", "bin", "java.exe")
+	outside := filepath.Join(t.TempDir(), "bin", "java.exe")
+
+	cases := []struct {
+		name string
+		path string
+		want string
+	}{
+		{"dentro del directorio de datos queda relativa", inside, "runtimes/jdk-17/jdk-17.0.20+8/bin/java.exe"},
+		{"fuera queda igual", outside, outside},
+		{"un comando pelado queda igual", "java", "java"},
+		{"vacia queda igual", "", ""},
+	}
+
+	for _, c := range cases {
+		if got := Portable(c.path); got != c.want {
+			t.Errorf("%s: Portable(%q) = %q, want %q", c.name, c.path, got, c.want)
+		}
+	}
+}
+
+// Absolute tiene que deshacer lo que hace Portable, sin importar el directorio
+// actual: el servidor se lanza con cmd.Dir en la instancia
+func TestAbsoluteAnclaAlDirectorioDeDatos(t *testing.T) {
+	root, err := filepath.Abs(approot.Dir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(root, "runtimes", "jdk-17", "bin", "java.exe")
+
+	if got := Absolute("runtimes/jdk-17/bin/java.exe"); got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+	if got := Absolute(Portable(want)); got != want {
+		t.Errorf("ida y vuelta: got %q, want %q", got, want)
+	}
+	if got := Absolute("java"); got != "java" {
+		t.Errorf("un comando pelado no se toca: got %q", got)
+	}
+}
+
+func TestMissing(t *testing.T) {
+	existing := filepath.Join(t.TempDir(), "java.exe")
+	if err := os.WriteFile(existing, nil, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	if Missing(existing) {
+		t.Error("un archivo que existe no falta")
+	}
+	if !Missing(filepath.Join(t.TempDir(), "jdk-25.0.2.10-hotspot", "bin", "java.exe")) {
+		t.Error("una ruta que no existe falta")
+	}
+	if Missing("java") {
+		t.Error("un comando pelado lo resuelve el PATH, no cuenta como faltante")
 	}
 }

@@ -9,6 +9,7 @@ package java
 import (
 	"bufio"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -135,7 +136,7 @@ var reportedVersionPattern = regexp.MustCompile(`version "(\d+)(?:\.(\d+))?`)
 // DetectMajor ejecuta el binario y devuelve su major de Java.
 func DetectMajor(javaPath string) (int, error) {
 	// java -version escribe en stderr, no en stdout.
-	output, err := exec.Command(javaPath, "-version").CombinedOutput()
+	output, err := exec.Command(Absolute(javaPath), "-version").CombinedOutput()
 	if err != nil {
 		return 0, fmt.Errorf("no se pudo ejecutar '%s': %w", javaPath, err)
 	}
@@ -192,8 +193,18 @@ func FromReader(reader *bufio.Reader) AskLine {
 // Resolve elige el runtime de una instancia que se está creando o actualizando.
 // Si el Java del sistema ya cumple, ofrece igual la opción de atar la instancia a
 // un runtime propio; si no cumple, va directo a conseguir uno.
+//
+// la ruta que devuelve queda como Portable, porque es la que se guarda en
+// instance.json
 func Resolve(reader *bufio.Reader, req Requirement, candidate string) (string, error) {
-	ask := FromReader(reader)
+	resolved, err := resolve(FromReader(reader), req, candidate)
+	if err != nil {
+		return "", err
+	}
+	return Portable(resolved), nil
+}
+
+func resolve(ask AskLine, req Requirement, candidate string) (string, error) {
 
 	if req.Min == 0 {
 		// Versión no reconocida: no hay nada que validar.
@@ -229,9 +240,13 @@ func Resolve(reader *bufio.Reader, req Requirement, candidate string) (string, e
 func Repair(ask AskLine, req Requirement) (string, error) {
 	if found := findInRuntimes(req); found != "" {
 		logx.Detail("Hay un runtime que sí cumple: %s", found)
-		return found, nil
+		return Portable(found), nil
 	}
-	return obtain(ask, req)
+	resolved, err := obtain(ask, req)
+	if err != nil {
+		return "", err
+	}
+	return Portable(resolved), nil
 }
 
 // wantsDedicated pregunta si atar la instancia a su propio runtime aunque el Java
@@ -345,18 +360,53 @@ func findInRuntimes(req Requirement) string {
 // Hace falta porque tanto el instalador de Forge como el servidor se lanzan con
 // cmd.Dir apuntando al directorio de la instancia: una ruta como
 // "runtimes/jdk-17/.../java.exe" se buscaría desde ahí y no desde la raíz del
-// proyecto. En instance.json se guarda relativa para que el proyecto siga siendo
-// portable, y se expande recién al momento de ejecutar.
+// programa. Las relativas se anclan al directorio de datos, que es contra el que
+// Portable las deja relativas.
 func Absolute(javaPath string) string {
 	// Un comando pelado como "java" lo resuelve el PATH, no hay que tocarlo.
-	if javaPath == "" || !strings.ContainsAny(javaPath, `/\`) {
+	if !isPath(javaPath) {
 		return javaPath
 	}
-	absolute, err := filepath.Abs(javaPath)
+	absolute, err := filepath.Abs(approot.Resolve(filepath.FromSlash(javaPath)))
 	if err != nil {
 		return javaPath
 	}
 	return absolute
+}
+
+// Portable deja relativa al directorio de datos una ruta de java que vive
+// adentro de el, como los JDK de runtimes/. Asi instance.json sigue sirviendo si
+// se mueve la carpeta del programa. Las rutas de afuera y los comandos pelados
+// quedan igual
+func Portable(javaPath string) string {
+	if !isPath(javaPath) {
+		return javaPath
+	}
+
+	root, err := filepath.Abs(approot.Dir())
+	if err != nil {
+		return javaPath
+	}
+	relative, err := filepath.Rel(root, Absolute(javaPath))
+	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return javaPath
+	}
+	return filepath.ToSlash(relative)
+}
+
+// Missing indica si una ruta de java apunta a un archivo que ya no esta, por
+// ejemplo porque el JDK se actualizo y cambio de carpeta. Un comando pelado lo
+// resuelve el PATH y no cuenta como faltante
+func Missing(javaPath string) bool {
+	if !isPath(javaPath) {
+		return false
+	}
+	_, err := os.Stat(Absolute(javaPath))
+	return err != nil
+}
+
+func isPath(javaPath string) bool {
+	return javaPath != "" && strings.ContainsAny(javaPath, `/\`)
 }
 
 func binaryName() string {
