@@ -121,6 +121,10 @@ go install github.com/tc-hib/go-winres@latest
 go-winres make --arch amd64 --in winres/winres.json --out cmd/rsrc
 ```
 
+## Pendiente
+
+- Al crear una instancia, y al actualizarla con `U`, elegir primero el loader y después la versión de Minecraft. Hoy es al revés, y recién al elegir el loader te enteras de que no soporta la versión que escribiste (pasa con Arclight, que publica sólo algunas versiones, o con NeoForge, que empieza en 1.20.2). Con el loader elegido primero, la versión se puede validar contra lo que ese loader soporta, o sugerir las disponibles.
+
 ## Créditos
 
 Ícono: [cubo-de-hierba-minecraft](https://icons8.com/icon/XfjNd4vkhBBy/cubo-de-hierba-minecraft) icon by [Icons8](https://icons8.com).
