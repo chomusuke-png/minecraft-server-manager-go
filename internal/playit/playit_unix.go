@@ -23,20 +23,26 @@ import (
 // primer arranque, que es cuando playit imprime el link para vincular la
 // cuenta— y además se guarda en 'playit.log' por si hace falta revisarla
 // después de que la consola ya se llenó con la del servidor.
+//
+// Sin --stdout playit arranca su interfaz interactiva, que sin terminal no
+// dibuja nada: el link de vinculacion no aparecia en ningun lado.
 func launch(absolutePlayitPath string) (int, error) {
-	logx.Info("Lanzando Playit (salida también en 'playit.log')...")
+	logx.Info("Lanzando Playit (salida también en '%s')...", logPath)
 
-	cmd := exec.Command(absolutePlayitPath)
+	cmd := exec.Command(absolutePlayitPath, "--stdout")
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 
-	logFile, logErr := os.OpenFile("playit.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	logFile, logErr := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if logErr != nil {
-		logx.Warn("No se pudo abrir playit.log, su salida solo va a esta consola: %v", logErr)
+		logx.Warn("No se pudo abrir %s, su salida solo va a esta consola: %v", logPath, logErr)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	} else {
-		cmd.Stdout = io.MultiWriter(os.Stdout, logFile)
-		cmd.Stderr = io.MultiWriter(os.Stderr, logFile)
+		// un solo writer para las dos salidas: exec usa entonces un unico pipe,
+		// asi el filtro de colores no se comparte entre dos goroutines
+		output := io.MultiWriter(os.Stdout, &ansiStripper{w: logFile})
+		cmd.Stdout = output
+		cmd.Stderr = output
 	}
 
 	if err := cmd.Start(); err != nil {

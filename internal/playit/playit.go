@@ -18,6 +18,7 @@ const (
 var (
 	registryPath = approot.Path("playit_registry.json")
 	lockPath     = registryPath + ".lock"
+	logPath      = approot.Path("playit.log")
 )
 
 type registry struct {
