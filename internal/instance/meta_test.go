@@ -14,6 +14,7 @@ func TestSaveAndLoadMetaRoundTrip(t *testing.T) {
 		RAMGB:          6,
 		LaunchArgs:     []string{"@user_jvm_args.txt", "@libraries/forge/win_args.txt", "nogui"},
 		JavaPath:       "runtimes/17/bin/java",
+		JavaMajor:      17,
 		BackupKeepMin:  5,
 		TunnelProvider: "ngrok",
 	}

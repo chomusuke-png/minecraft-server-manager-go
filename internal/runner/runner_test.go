@@ -9,6 +9,7 @@ import (
 
 	"minecraft-manager/internal/config"
 	"minecraft-manager/internal/instance"
+	"minecraft-manager/internal/java"
 )
 
 func testRunner() *Runner {
@@ -177,5 +178,23 @@ func TestReplaceMissingJavaSinAlternativa(t *testing.T) {
 
 	if r.replaceMissingJava(t.TempDir(), &instance.InstanceMeta{}, missing, nil) {
 		t.Error("si el que falta es el global no hay a qué volver")
+	}
+}
+
+func TestJavaRequirementUsaElJavaDeMojang(t *testing.T) {
+	cases := []struct {
+		name string
+		meta instance.InstanceMeta
+		want java.Requirement
+	}{
+		{"sin java_major queda la tabla", instance.InstanceMeta{LoaderType: "paper", MCVersion: "1.21.1"}, java.Requirement{Min: 21}},
+		{"mojang pide mas que la tabla", instance.InstanceMeta{LoaderType: "paper", MCVersion: "26.3", JavaMajor: 26}, java.Requirement{Min: 26}},
+		{"una numeracion que la tabla no conoce", instance.InstanceMeta{LoaderType: "fabric", MCVersion: "snapshot-raro", JavaMajor: 25}, java.Requirement{Min: 25}},
+	}
+
+	for _, c := range cases {
+		if got := javaRequirement(&c.meta); got != c.want {
+			t.Errorf("%s: got %+v, want %+v", c.name, got, c.want)
+		}
 	}
 }

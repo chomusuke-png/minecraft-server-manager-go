@@ -63,7 +63,15 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader, javaPath string) err
 	updatedBackupKeepMin := instance.PromptBackupKeepMinUpdate(reader, meta.BackupKeepMin)
 	updatedTunnelProvider := instance.PromptTunnelProviderUpdate(reader, meta.TunnelProvider)
 
-	resolvedJava, err := java.Resolve(reader, java.RequireFor(newLoaderType, newVersion), preferredJava(meta, javaPath))
+	// si Mojang no responde pero la version no cambio, sigue valiendo lo que se
+	// guardo al instalar
+	javaMajor := downloader.JavaMajorForVersion(newVersion)
+	if javaMajor == 0 && newVersion == meta.MCVersion {
+		javaMajor = meta.JavaMajor
+	}
+
+	requirement := java.RequireFor(newLoaderType, newVersion).WithMojangMinimum(javaMajor)
+	resolvedJava, err := java.Resolve(reader, requirement, preferredJava(meta, javaPath))
 	if err != nil {
 		return err
 	}
@@ -84,6 +92,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader, javaPath string) err
 	meta.TunnelProvider = updatedTunnelProvider
 	meta.LaunchArgs = newLaunchArgs
 	meta.JavaPath = resolvedJava
+	meta.JavaMajor = javaMajor
 	if err := instance.SaveMeta(instanceDir, *meta); err != nil {
 		logx.Warn("Advertencia: no se pudo actualizar instance.json: %v", err)
 	}

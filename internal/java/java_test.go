@@ -264,3 +264,24 @@ func TestPickRuntimeEligeElMajorMasBajoQueCumple(t *testing.T) {
 		t.Errorf("sin candidatos = %q, want vacío", got)
 	}
 }
+
+func TestWithMojangMinimum(t *testing.T) {
+	cases := []struct {
+		name   string
+		table  Requirement
+		mojang int
+		want   Requirement
+	}{
+		{"mojang pide mas que la tabla: gana mojang", Requirement{Min: 25}, 26, Requirement{Min: 26}},
+		{"la 1.17 declara Java 16, sin soporte: se queda el 17 de la tabla", Requirement{Min: 17}, 16, Requirement{Min: 17}},
+		{"sin consultar a mojang queda la tabla", Requirement{Min: 21}, 0, Requirement{Min: 21}},
+		{"una version que la tabla no conoce toma la de mojang", Requirement{}, 25, Requirement{Min: 25}},
+		{"el tope de la era pre-1.17 se conserva", Requirement{Min: 8, Max: 11}, 8, Requirement{Min: 8, Max: 11}},
+	}
+
+	for _, c := range cases {
+		if got := c.table.WithMojangMinimum(c.mojang); got != c.want {
+			t.Errorf("%s: got %+v, want %+v", c.name, got, c.want)
+		}
+	}
+}

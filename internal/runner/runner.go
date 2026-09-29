@@ -111,7 +111,7 @@ func (r *Runner) resolveJava(meta *instance.InstanceMeta) string {
 		logx.Info("Java por instancia: %s", javaPath)
 	}
 
-	requirement := java.RequireFor(meta.LoaderType, meta.MCVersion)
+	requirement := javaRequirement(meta)
 	// si falta, Start ofrece reemplazarlo y verificarlo aca solo daria un aviso
 	// confuso
 	if requirement.Min == 0 || java.Missing(javaPath) {
@@ -130,11 +130,17 @@ func (r *Runner) resolveJava(meta *instance.InstanceMeta) string {
 	return javaPath
 }
 
+// javaRequirement es el Java que necesita la instancia: el de la tabla, subido
+// al que declaro Mojang al instalarla si ese es mas alto
+func javaRequirement(meta *instance.InstanceMeta) java.Requirement {
+	return java.RequireFor(meta.LoaderType, meta.MCVersion).WithMojangMinimum(meta.JavaMajor)
+}
+
 // offerJavaFix ofrece conseguir el runtime correcto cuando el arranque falló por
 // una incompatibilidad de Java, y persiste la elección. Devuelve true si algo
 // cambió y vale la pena reintentar ya, sin esperar los 10 segundos.
 func (r *Runner) offerJavaFix(instanceDir string, meta *instance.InstanceMeta, javaPath string, sawMismatch bool, stdinLines <-chan string) bool {
-	requirement := java.RequireFor(meta.LoaderType, meta.MCVersion)
+	requirement := javaRequirement(meta)
 	if requirement.Min == 0 {
 		return false
 	}
@@ -162,7 +168,7 @@ func (r *Runner) replaceMissingJava(instanceDir string, meta *instance.InstanceM
 	logx.Warn("No se encuentra el Java configurado: '%s'.", javaPath)
 	logx.Detail("Puede que se haya actualizado a otra carpeta o que se haya movido el programa.")
 
-	requirement := java.RequireFor(meta.LoaderType, meta.MCVersion)
+	requirement := javaRequirement(meta)
 	if requirement.Min == 0 {
 		// sin version reconocida no se sabe que pedir: se vuelve al java global,
 		// sin guardarlo, para no pisar una eleccion hecha a mano

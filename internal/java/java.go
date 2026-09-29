@@ -83,6 +83,17 @@ func RequireFor(loaderType, mcVersion string) Requirement {
 	return req
 }
 
+// WithMojangMinimum sube el minimo al Java que declara Mojang para la version,
+// solo si es mas alto que el de la tabla. Mojang a veces declara uno que ya no
+// tiene soporte, como el 16 de la 1.17, y el tope de la era pre-1.17 o el de
+// un loader siguen saliendo de la tabla. 0 = Mojang no se pudo consultar
+func (r Requirement) WithMojangMinimum(major int) Requirement {
+	if major > r.Min {
+		r.Min = major
+	}
+	return r
+}
+
 // isYearVersion reconoce la numeracion por año (26.1, 26.1.2, 26.4-snapshot-1)
 // que reemplazo a la 1.X despues de la 1.21.11
 func isYearVersion(mcVersion string) bool {

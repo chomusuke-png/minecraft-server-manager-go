@@ -18,6 +18,10 @@ type MojangVersionDetails struct {
 			SHA1 string `json:"sha1"`
 		} `json:"server"`
 	} `json:"downloads"`
+	// el Java que pide Mojang para correr esa version
+	JavaVersion struct {
+		MajorVersion int `json:"majorVersion"`
+	} `json:"javaVersion"`
 }
 
 // PaperBuild es una build en la API v3 de Paper, que devuelve la lista de la

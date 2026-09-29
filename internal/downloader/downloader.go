@@ -39,6 +39,8 @@ type DownloadResult struct {
 	LoaderVersion string
 	LaunchArgs    []string
 	JavaPath      string
+	// el Java que declara Mojang para la version; 0 si no se pudo consultar
+	JavaMajor int
 }
 
 func New(serverDir string, javaPath string) *Downloader {
@@ -143,28 +145,54 @@ func (d *Downloader) DownloadForge(version string, forgeVersion string) (string,
 	return forgeVersion, launchArgs, nil
 }
 
-func (d *Downloader) DownloadVanilla(version string) (string, error) {
-	versionManifestURL := "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+const mojangManifestURL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
 
+// mojangVersionDetails trae el detalle de una version desde el manifest de
+// Mojang, que lista todas las versiones oficiales, tambien las que usan los
+// loaders
+func mojangVersionDetails(version string) (MojangVersionDetails, error) {
 	var manifest MojangManifest
-	if err := getJSON(versionManifestURL, &manifest); err != nil {
-		return "", err
+	if err := getJSON(mojangManifestURL, &manifest); err != nil {
+		return MojangVersionDetails{}, err
 	}
 
-	var versionDetailsURL string
-	for _, manifestVersion := range manifest.Versions {
-		if manifestVersion.ID == version {
-			versionDetailsURL = manifestVersion.URL
-			break
-		}
-	}
-
-	if versionDetailsURL == "" {
-		return "", fmt.Errorf("la versión %s no figura en el manifest de Mojang", version)
+	detailsURL, ok := mojangVersionURL(manifest, version)
+	if !ok {
+		return MojangVersionDetails{}, fmt.Errorf("la versión %s no figura en el manifest de Mojang", version)
 	}
 
 	var details MojangVersionDetails
-	if err := getJSON(versionDetailsURL, &details); err != nil {
+	if err := getJSON(detailsURL, &details); err != nil {
+		return MojangVersionDetails{}, err
+	}
+	return details, nil
+}
+
+func mojangVersionURL(manifest MojangManifest, version string) (string, bool) {
+	for _, manifestVersion := range manifest.Versions {
+		if manifestVersion.ID == version {
+			return manifestVersion.URL, true
+		}
+	}
+	return "", false
+}
+
+// MojangJavaMajor devuelve el Java que declara Mojang para la version. A
+// diferencia de la tabla interna no se desactualiza cuando Mojang sube de Java
+func MojangJavaMajor(version string) (int, error) {
+	details, err := mojangVersionDetails(version)
+	if err != nil {
+		return 0, err
+	}
+	if details.JavaVersion.MajorVersion == 0 {
+		return 0, fmt.Errorf("Mojang no declara qué Java pide la %s", version)
+	}
+	return details.JavaVersion.MajorVersion, nil
+}
+
+func (d *Downloader) DownloadVanilla(version string) (string, error) {
+	details, err := mojangVersionDetails(version)
+	if err != nil {
 		return "", err
 	}
 
@@ -309,7 +337,8 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 		return nil
 	}
 
-	if err := d.resolveJava(reader, loaderType, version); err != nil {
+	javaMajor := JavaMajorForVersion(version)
+	if err := d.resolveJava(reader, loaderType, version, javaMajor); err != nil {
 		logx.Error("\n%v", err)
 		return nil
 	}
@@ -332,16 +361,30 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 		LoaderVersion: loaderVersion,
 		LaunchArgs:    launchArgs,
 		JavaPath:      d.javaPath,
+		JavaMajor:     javaMajor,
 	}
 }
 
-func (d *Downloader) resolveJava(reader *bufio.Reader, loaderType string, mcVersion string) error {
-	resolved, err := java.Resolve(reader, java.RequireFor(loaderType, mcVersion), d.javaPath)
+func (d *Downloader) resolveJava(reader *bufio.Reader, loaderType, mcVersion string, javaMajor int) error {
+	requirement := java.RequireFor(loaderType, mcVersion).WithMojangMinimum(javaMajor)
+	resolved, err := java.Resolve(reader, requirement, d.javaPath)
 	if err != nil {
 		return err
 	}
 	d.javaPath = resolved
 	return nil
+}
+
+// JavaMajorForVersion consulta a Mojang que Java pide la version. Si no puede,
+// avisa y devuelve 0 para que el requisito salga de la tabla interna, que es
+// lo que se usaba antes: sin conexion no se bloquea nada
+func JavaMajorForVersion(version string) int {
+	major, err := MojangJavaMajor(version)
+	if err != nil {
+		logx.Warn("No se pudo consultar a Mojang qué Java pide %s, se usa la tabla interna: %v", version, err)
+		return 0
+	}
+	return major
 }
 
 func getJSON(url string, target interface{}) error {

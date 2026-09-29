@@ -14,6 +14,7 @@ type InstanceMeta struct {
 	RAMGB          int      `json:"ram_gb,omitempty"`          // 0 = usar el valor global de config.json
 	LaunchArgs     []string `json:"launch_args,omitempty"`     // reemplaza el ejecutable de arranque si el loader no produce su .jar
 	JavaPath       string   `json:"java_path,omitempty"`       // pisa el path de java por si la instalacion requiere otra version
+	JavaMajor      int      `json:"java_major,omitempty"`      // el java que pide mojang para mc_version; 0 = usar la tabla interna
 	BackupKeepMin  int      `json:"backup_keep_min,omitempty"` // BackupKeepMin pisa el backup_keep_min global. 0 = usar el valor global.
 	TunnelProvider string   `json:"tunnel_provider,omitempty"` // "playit", "ngrok", "none".
 }
