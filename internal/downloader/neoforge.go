@@ -51,15 +51,21 @@ func (d *Downloader) DownloadNeoForge(version string, neoForgeVersion string) (s
 	return neoForgeVersion, launchArgs, nil
 }
 
-// neoForgeVersionPrefix deriva el prefijo "<minor>.<patch>." que usan las
-// versiones de NeoForge a partir de una versión de Minecraft "1.X" o "1.X.Y".
+// neoForgeVersionPrefix deriva el prefijo con el que NeoForge numera sus
+// versiones para una version de Minecraft. Hasta la 1.21.x usaba tres numeros,
+// asi que 1.X.Y es "X.Y."; con la numeracion por año usa cuatro, y 26.D.P es
+// "26.D.P." con el patch en 0 si falta: 26.3 es "26.3.0." y 26.1.2 es "26.1.2."
 func neoForgeVersionPrefix(mcVersion string) (string, bool) {
 	parts := strings.Split(strings.TrimSpace(mcVersion), ".")
-	if len(parts) < 2 || parts[0] != "1" {
+	if len(parts) < 2 {
 		return "", false
 	}
 
-	minor, err := strconv.Atoi(parts[1])
+	first, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return "", false
+	}
+	second, err := strconv.Atoi(parts[1])
 	if err != nil {
 		return "", false
 	}
@@ -77,5 +83,11 @@ func neoForgeVersionPrefix(mcVersion string) (string, bool) {
 		}
 	}
 
-	return fmt.Sprintf("%d.%d.", minor, patch), true
+	switch {
+	case first == 1:
+		return fmt.Sprintf("%d.%d.", second, patch), true
+	case first >= 26:
+		return fmt.Sprintf("%d.%d.%d.", first, second, patch), true
+	}
+	return "", false
 }

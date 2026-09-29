@@ -16,7 +16,10 @@ func TestNeoForgeVersionPrefix(t *testing.T) {
 		{"1.21", "21.0.", true},
 		{"1.20.4", "20.4.", true},
 		{"1.21.1-pre1", "21.1.", true},
-		{"1.26.2", "26.2.", true},
+		// numeracion por año: cuatro numeros, con el patch en 0 si falta
+		{"26.1", "26.1.0.", true},
+		{"26.1.2", "26.1.2.", true},
+		{"26.3", "26.3.0.", true},
 		{"21.1", "", false},
 		{"1", "", false},
 		{"1.x", "", false},

@@ -145,6 +145,10 @@ func TestNeoForgeMCVersion(t *testing.T) {
 		{"21.0.167", "1.21"},
 		{"20.4.237", "1.20.4"},
 		{"20.4.80-beta", "1.20.4"},
+		// numeracion por año
+		{"26.3.0.33-beta", "26.3"},
+		{"26.1.2.43-beta", "26.1.2"},
+		{"26.1.0.0-alpha.1+snapshot-1", "26.1"},
 		{"basura", ""},
 		{"21", ""},
 	}
@@ -158,7 +162,7 @@ func TestNeoForgeMCVersion(t *testing.T) {
 // neoForgeMCVersion tiene que ser la inversa exacta de neoForgeVersionPrefix,
 // que es lo que se usa para buscar versiones al instalar
 func TestNeoForgeMCVersionEsLaInversaDelPrefijo(t *testing.T) {
-	for _, mcVersion := range []string{"1.20.2", "1.20.4", "1.21", "1.21.1", "1.21.4"} {
+	for _, mcVersion := range []string{"1.20.2", "1.20.4", "1.21", "1.21.1", "1.21.4", "26.1", "26.1.2", "26.3"} {
 		prefix, ok := neoForgeVersionPrefix(mcVersion)
 		if !ok {
 			t.Fatalf("neoForgeVersionPrefix(%q) falló", mcVersion)

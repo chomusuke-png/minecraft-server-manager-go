@@ -114,25 +114,39 @@ func identifyArgsFile(argsFile string) (loaderType, mcVersion, loaderVersion str
 	return "", "", ""
 }
 
-// neoForgeMCVersion es la inversa de neoForgeVersionPrefix: NeoForge 21.1.x es
-// para Minecraft 1.21.1, y 21.0.x para 1.21
+// neoForgeMCVersion es la inversa de neoForgeVersionPrefix. Con tres numeros es
+// el esquema viejo: 21.1.x es para Minecraft 1.21.1 y 21.0.x para 1.21. Con
+// cuatro es la numeracion por año: 26.3.0.x es para 26.3 y 26.1.2.x para 26.1.2
 func neoForgeMCVersion(neoForgeVersion string) string {
 	parts := strings.Split(neoForgeVersion, ".")
 	if len(parts) < 2 {
 		return ""
 	}
 
-	minor, err := strconv.Atoi(parts[0])
+	first, err := strconv.Atoi(parts[0])
 	if err != nil {
 		return ""
 	}
-	patch, err := strconv.Atoi(parts[1])
+	second, err := strconv.Atoi(parts[1])
 	if err != nil {
 		return ""
 	}
 
-	if patch == 0 {
-		return fmt.Sprintf("1.%d", minor)
+	// en el esquema viejo el tercer numero es el build y puede traer sufijo
+	// (20.4.80-beta); en el nuevo es el patch de minecraft y siempre es numero
+	if len(parts) >= 4 {
+		patch, err := strconv.Atoi(parts[2])
+		if err != nil {
+			return ""
+		}
+		if patch == 0 {
+			return fmt.Sprintf("%d.%d", first, second)
+		}
+		return fmt.Sprintf("%d.%d.%d", first, second, patch)
 	}
-	return fmt.Sprintf("1.%d.%d", minor, patch)
+
+	if second == 0 {
+		return fmt.Sprintf("1.%d", first)
+	}
+	return fmt.Sprintf("1.%d.%d", first, second)
 }
