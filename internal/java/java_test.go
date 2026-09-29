@@ -30,6 +30,11 @@ func TestRequire(t *testing.T) {
 		{"", Requirement{}},
 		{"snapshot", Requirement{}},
 		{"23w31a", Requirement{}},
+		// numeracion por año, que reemplazo a la 1.X: todas piden Java 25
+		{"26.1", Requirement{Min: 25}},
+		{"26.1.2", Requirement{Min: 25}},
+		{"26.3", Requirement{Min: 25}},
+		{"26.4-snapshot-1", Requirement{Min: 25}},
 	}
 
 	for _, c := range cases {

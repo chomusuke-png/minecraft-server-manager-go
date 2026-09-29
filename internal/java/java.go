@@ -40,6 +40,13 @@ type Requirement struct {
 // verificado que Forge 1.19.1 (que pide 17) arranca sin problemas en Java 21, así
 // que tratar el requisito como exacto haría descargar un runtime al vacío.
 func Require(mcVersion string) Requirement {
+	// desde la 26.1 minecraft numera por año, y Mojang pide Java 25 para todas.
+	// Es el respaldo sin conexion: al instalar manda el Java que declara Mojang,
+	// que no se desactualiza cuando suba de version
+	if isYearVersion(mcVersion) {
+		return Requirement{Min: 25}
+	}
+
 	minor, patch, ok := parseMCVersion(mcVersion)
 	if !ok {
 		return Requirement{}
@@ -74,6 +81,17 @@ func RequireFor(loaderType, mcVersion string) Requirement {
 		req.Max = maxMajor
 	}
 	return req
+}
+
+// isYearVersion reconoce la numeracion por año (26.1, 26.1.2, 26.4-snapshot-1)
+// que reemplazo a la 1.X despues de la 1.21.11
+func isYearVersion(mcVersion string) bool {
+	first, _, found := strings.Cut(strings.TrimSpace(mcVersion), ".")
+	if !found {
+		return false
+	}
+	year, err := strconv.Atoi(first)
+	return err == nil && year >= 26
 }
 
 func (r Requirement) Satisfies(major int) bool {
