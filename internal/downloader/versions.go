@@ -27,10 +27,6 @@ type versionChoice struct {
 	value       string
 }
 
-func (c versionChoice) label() string {
-	return fmt.Sprintf("%s — %s", c.value, joinDescriptors(c.descriptors))
-}
-
 func joinDescriptors(descriptors []string) string {
 	if len(descriptors) == 1 {
 		return descriptors[0]
@@ -217,14 +213,25 @@ func promptLoaderVersion(reader *bufio.Reader, label string, available loaderVer
 	customOption := len(choices) + 1
 	cancelOption := customOption + 1
 
-	fmt.Printf("\n[?] Versión de %s:\n", label)
+	labels := make([]string, len(choices))
+	notes := make([]string, len(choices))
 	for i, choice := range choices {
-		fmt.Printf("  %d) %s\n", i+1, choice.label())
+		labels[i] = choice.value
+		notes[i] = joinDescriptors(choice.descriptors)
 	}
+
+	fmt.Printf("\n[?] Versión de %s:\n", label)
+	fmt.Print(prompt.Options("  ", labels, notes))
 	fmt.Printf("  %d) Escribir una versión\n", customOption)
 	fmt.Printf("  %d) Cancelar\n", cancelOption)
 
-	promptText := fmt.Sprintf("[?] Opción [1-%d] [1]: ", cancelOption)
+	// Enter elige la primera, que es la actual si se ofrece
+	enterHint := "Enter elige " + choices[0].descriptors[0]
+	if choices[0].descriptors[0] == "la actual" {
+		enterHint = prompt.EnterKeepsCurrent
+	}
+
+	promptText := prompt.MenuQuestion(cancelOption, enterHint)
 	choice := prompt.LoopDefault(reader, promptText, 1, func(input string) (int, bool, string) {
 		value, err := strconv.Atoi(input)
 		if err != nil || value < 1 || value > cancelOption {

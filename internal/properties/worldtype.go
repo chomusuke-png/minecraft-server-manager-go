@@ -24,11 +24,14 @@ var worldTypes = []worldType{
 
 func promptWorldType(reader *bufio.Reader, mcVersion string) string {
 	fmt.Println("\n[?] Tipo de mundo:")
+	labels := make([]string, len(worldTypes))
 	for i, wt := range worldTypes {
-		fmt.Printf("  %d) %s\n", i+1, wt.label)
+		labels[i] = wt.label
 	}
+	fmt.Print(prompt.Options("  ", labels, []string{prompt.OriginDefault}))
 
-	choice := prompt.LoopDefault(reader, "[?] Opción [1-4] [1]: ", 1, func(input string) (int, bool, string) {
+	promptText := prompt.MenuQuestion(len(worldTypes), prompt.EnterPicksDefault)
+	choice := prompt.LoopDefault(reader, promptText, 1, func(input string) (int, bool, string) {
 		value, err := strconv.Atoi(input)
 		if err != nil || value < 1 || value > len(worldTypes) {
 			return 0, false, fmt.Sprintf("Opción inválida. Elige un número entre 1 y %d.", len(worldTypes))

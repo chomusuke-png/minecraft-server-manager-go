@@ -77,7 +77,7 @@ func CreateInstance(reader *bufio.Reader, defaultRAMGB int) (string, int, string
 }
 
 func promptRAM(reader *bufio.Reader, defaultValue int) int {
-	promptText := fmt.Sprintf("[?] RAM asignada en GB (Enter para usar %dGB): ", defaultValue)
+	promptText := "[?] RAM asignada en GB" + prompt.Default(prompt.OriginDefault, defaultValue) + ": "
 	return prompt.LoopDefault(reader, promptText, defaultValue, func(input string) (int, bool, string) {
 		value, err := strconv.Atoi(input)
 		if err != nil || value <= 0 {
@@ -195,9 +195,10 @@ func joinColumns(values []string, widths []int) string {
 }
 
 func PromptRAMUpdate(reader *bufio.Reader, current int) int {
-	promptText := fmt.Sprintf("[?] RAM asignada en GB (Enter para mantener %dGB): ", current)
+	// 0 es usar el valor global de config.json
+	promptText := "[?] RAM asignada en GB" + prompt.Default(prompt.OriginCurrent, current) + ": "
 	if current == 0 {
-		promptText = "[?] RAM asignada en GB (Enter para usar el valor global de config.json): "
+		promptText = "[?] RAM asignada en GB [global de config.json]: "
 	}
 
 	return prompt.LoopDefault(reader, promptText, current, func(input string) (int, bool, string) {
@@ -209,52 +210,69 @@ func PromptRAMUpdate(reader *bufio.Reader, current int) int {
 	})
 }
 
+// tunnelProviders es el orden en que se numeran los tuneles en los menus
+var tunnelProviders = []struct {
+	value string
+	label string
+}{
+	{"playit", "Playit"},
+	{"ngrok", "ngrok"},
+	{"none", "Ninguno"},
+}
+
+const recommendedTunnel = "playit"
+
 func PromptTunnelProvider(reader *bufio.Reader) string {
 	fmt.Println("\n[?] Túnel para exponer el servidor a internet:")
-	fmt.Println("  1) Playit [recomendado]")
-	fmt.Println("  2) ngrok")
-	fmt.Println("  3) Ninguno")
-
-	return prompt.LoopDefault(reader, "[?] Opción (Enter para Playit): ", "playit", func(input string) (string, bool, string) {
-		switch input {
-		case "1":
-			return "playit", true, ""
-		case "2":
-			return "ngrok", true, ""
-		case "3":
-			return "none", true, ""
-		}
-		return "", false, "Entrada incorrecta, reintente."
-	})
+	return promptTunnel(reader, "")
 }
 
 func PromptTunnelProviderUpdate(reader *bufio.Reader, current string) string {
 	if current == "" {
-		current = "playit"
+		current = recommendedTunnel
 	}
 
-	fmt.Printf("\n[?] Túnel (Enter para mantener '%s'):\n", current)
-	fmt.Println("  1) Playit [recomendado]")
-	fmt.Println("  2) ngrok")
-	fmt.Println("  3) Ninguno")
+	fmt.Println("\n[?] Túnel:")
+	return promptTunnel(reader, current)
+}
 
-	return prompt.LoopDefault(reader, "[?] Opción (Enter para mantener actual): ", current, func(input string) (string, bool, string) {
-		switch input {
-		case "1":
-			return "playit", true, ""
-		case "2":
-			return "ngrok", true, ""
-		case "3":
-			return "none", true, ""
+// promptTunnel marca la recomendada y, al actualizar, la actual. Enter elige
+// la actual si hay, o la recomendada al crear
+func promptTunnel(reader *bufio.Reader, current string) string {
+	labels := make([]string, len(tunnelProviders))
+	notes := make([]string, len(tunnelProviders))
+	for i, provider := range tunnelProviders {
+		labels[i] = provider.label
+		switch {
+		case provider.value == recommendedTunnel && provider.value == current:
+			notes[i] = "recomendado y actual"
+		case provider.value == recommendedTunnel:
+			notes[i] = "recomendado"
+		case provider.value == current:
+			notes[i] = "actual"
 		}
-		return "", false, "Entrada incorrecta, reintente."
+	}
+	fmt.Print(prompt.Options("  ", labels, notes))
+
+	defaultValue, enterHint := recommendedTunnel, prompt.EnterPicksRecommended
+	if current != "" {
+		defaultValue, enterHint = current, prompt.EnterKeepsCurrent
+	}
+
+	promptText := prompt.MenuQuestion(len(tunnelProviders), enterHint)
+	return prompt.LoopDefault(reader, promptText, defaultValue, func(input string) (string, bool, string) {
+		choice, err := strconv.Atoi(input)
+		if err != nil || choice < 1 || choice > len(tunnelProviders) {
+			return "", false, "Entrada incorrecta, reintente."
+		}
+		return tunnelProviders[choice-1].value, true, ""
 	})
 }
 
 func PromptBackupKeepMinUpdate(reader *bufio.Reader, current int) int {
-	promptText := fmt.Sprintf("[?] Mínimo de backups a conservar (Enter para mantener %d, 0 = usar el global): ", current)
+	promptText := "[?] Mínimo de backups a conservar (0 = el global)" + prompt.Default(prompt.OriginCurrent, current) + ": "
 	if current == 0 {
-		promptText = "[?] Mínimo de backups a conservar (Enter para usar el valor global de config.json): "
+		promptText = "[?] Mínimo de backups a conservar (0 = el global) [global de config.json]: "
 	}
 
 	return prompt.LoopDefault(reader, promptText, current, func(input string) (int, bool, string) {

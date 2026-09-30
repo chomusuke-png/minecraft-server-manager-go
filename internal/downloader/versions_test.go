@@ -127,15 +127,15 @@ func TestVersionChoicesAgrupaLaMismaVersion(t *testing.T) {
 	if len(choices) != 1 {
 		t.Fatalf("una sola versión debería dar una sola opción, got %v", choices)
 	}
-	if got := choices[0].label(); got != "47.4.0 — la actual, la más reciente y la estable" {
-		t.Errorf("label = %q", got)
+	if got := joinDescriptors(choices[0].descriptors); choices[0].value != "47.4.0" || got != "la actual, la más reciente y la estable" {
+		t.Errorf("choice = %q — %q", choices[0].value, got)
 	}
 }
 
 func TestVersionChoicesSaltaLosVacios(t *testing.T) {
 	choices := versionChoices(loaderVersions{latest: "0.17.0"}, "")
 
-	if len(choices) != 1 || choices[0].label() != "0.17.0 — la más reciente" {
+	if len(choices) != 1 || choices[0].value != "0.17.0" || joinDescriptors(choices[0].descriptors) != "la más reciente" {
 		t.Errorf("choices = %v", choices)
 	}
 }

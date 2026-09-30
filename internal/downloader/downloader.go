@@ -305,10 +305,10 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 	cancelOption := len(Loaders) + 1
 
 	fmt.Printf("\n[?] Tipo de servidor para %s:\n", version)
-	PrintLoaderOptions("  ")
+	PrintLoaderOptions("  ", "")
 	fmt.Printf("  %d) Cancelar\n", cancelOption)
 
-	promptText := fmt.Sprintf("\n[?] Opción [1-%d]: ", cancelOption)
+	promptText := "\n" + prompt.MenuQuestion(cancelOption, "")
 	loaderType, ok := prompt.Loop(reader, promptText, func(input string) (string, bool, string) {
 		if input == strconv.Itoa(cancelOption) {
 			return "", true, ""

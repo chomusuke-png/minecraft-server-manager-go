@@ -36,7 +36,7 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader, javaPath string) err
 	}
 	logx.Info("\nInstancia actual: %s %s | RAM: %s", meta.LoaderType, meta.MCVersion, ramDisplay)
 
-	promptText := fmt.Sprintf("[?] Nueva versión de Minecraft (Enter para mantener '%s'): ", meta.MCVersion)
+	promptText := "[?] Nueva versión de Minecraft" + prompt.Default(prompt.OriginCurrent, meta.MCVersion) + ": "
 	newVersion := prompt.LoopDefault(reader, promptText, meta.MCVersion, func(input string) (string, bool, string) {
 		return input, true, ""
 	})
@@ -113,13 +113,23 @@ func preferredJava(meta *instance.InstanceMeta, globalJavaPath string) string {
 }
 
 func promptLoaderType(reader *bufio.Reader, current string) string {
-	fmt.Printf("\n[?] Tipo de loader (Enter para mantener '%s'):\n", current)
-	downloader.PrintLoaderOptions("  ")
+	fmt.Printf("\n[?] Tipo de loader:\n")
+	downloader.PrintLoaderOptions("  ", current)
 
-	return prompt.LoopDefault(reader, "\n[?] Opción (Enter para mantener actual): ", current, func(input string) (string, bool, string) {
+	parse := func(input string) (string, bool, string) {
 		if loader, ok := downloader.LoaderByChoice(input); ok {
 			return loader, true, ""
 		}
 		return "", false, "Entrada incorrecta, reintente."
-	})
+	}
+
+	if _, ok := downloader.LoaderChoice(current); ok {
+		promptText := "\n" + prompt.MenuQuestion(len(downloader.Loaders), prompt.EnterKeepsCurrent)
+		return prompt.LoopDefault(reader, promptText, current, parse)
+	}
+
+	// un loader que ya no existe no puede ser el default
+	promptText := "\n" + prompt.MenuQuestion(len(downloader.Loaders), "")
+	loader, _ := prompt.Loop(reader, promptText, parse)
+	return loader
 }

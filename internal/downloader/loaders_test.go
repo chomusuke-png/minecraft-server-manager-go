@@ -1,6 +1,7 @@
 package downloader
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -80,7 +81,7 @@ func TestTodosLosLoadersDicenQueAceptan(t *testing.T) {
 }
 
 func TestLoaderOptionsAlineaLaColumna(t *testing.T) {
-	lines := strings.Split(strings.TrimSuffix(loaderOptions("  "), "\n"), "\n")
+	lines := strings.Split(strings.TrimSuffix(loaderOptions("  ", ""), "\n"), "\n")
 	if len(lines) != len(Loaders) {
 		t.Fatalf("se esperaban %d líneas, got %d", len(Loaders), len(lines))
 	}
@@ -93,5 +94,32 @@ func TestLoaderOptionsAlineaLaColumna(t *testing.T) {
 	}
 	if lines[5] != "  6) Arclight   plugins y mods" {
 		t.Errorf("línea de Arclight = %q", lines[5])
+	}
+}
+
+func TestLoaderChoiceEsElInversoDeLoaderByChoice(t *testing.T) {
+	for _, loader := range Loaders {
+		choice, ok := LoaderChoice(loader.Type)
+		if !ok {
+			t.Fatalf("%s no tiene número", loader.Type)
+		}
+		if got, _ := LoaderByChoice(strconv.Itoa(choice)); got != loader.Type {
+			t.Errorf("%s -> %d -> %s", loader.Type, choice, got)
+		}
+	}
+	if _, ok := LoaderChoice("spigot"); ok {
+		t.Error("un loader que no existe no debería tener número")
+	}
+}
+
+func TestLoaderOptionsMarcaLaActual(t *testing.T) {
+	lines := strings.Split(loaderOptions("  ", "quilt"), "\n")
+	if !strings.HasSuffix(lines[2], "— actual") || !strings.HasPrefix(lines[2], "  3) Quilt") {
+		t.Errorf("línea de Quilt = %q", lines[2])
+	}
+	for i, line := range lines {
+		if i != 2 && strings.Contains(line, "—") {
+			t.Errorf("solo la actual debería estar marcada: %q", line)
+		}
 	}
 }

@@ -106,3 +106,41 @@ func TestLoopDefaultFallsBackOnEOF(t *testing.T) {
 		t.Errorf("got %d, want 42 (default)", got)
 	}
 }
+
+func TestDefault(t *testing.T) {
+	if got := Default(OriginCurrent, 6); got != " [actual: 6]" {
+		t.Errorf("got %q", got)
+	}
+	if got := Default(OriginDefault, "true"); got != " [por defecto: true]" {
+		t.Errorf("got %q", got)
+	}
+}
+
+func TestMenuQuestion(t *testing.T) {
+	if got := MenuQuestion(3, EnterKeepsCurrent); got != "[?] Opción [1-3], Enter mantiene la actual: " {
+		t.Errorf("con default = %q", got)
+	}
+	if got := MenuQuestion(8, ""); got != "[?] Opción [1-8]: " {
+		t.Errorf("sin default = %q", got)
+	}
+}
+
+func TestOptionsAlineaLasNotas(t *testing.T) {
+	got := Options("  ", []string{"Playit", "ngrok", "Ninguno"}, []string{"recomendado", "actual"})
+	want := "" +
+		"  1) Playit   — recomendado\n" +
+		"  2) ngrok    — actual\n" +
+		"  3) Ninguno\n"
+	if got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+// las etiquetas con acentos se alinean por caracteres, no por bytes
+func TestOptionsCuentaCaracteresNoBytes(t *testing.T) {
+	got := Options("", []string{"Pacífico", "Difícil"}, []string{"a", "b"})
+	want := "1) Pacífico   — a\n2) Difícil    — b\n"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}

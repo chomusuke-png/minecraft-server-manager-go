@@ -25,7 +25,7 @@ func SetupInitialProperties(reader *bufio.Reader, serverDir string, mcVersion st
 	levelType := promptWorldType(reader, mcVersion)
 	maxPlayers := promptInt(reader, "[?] Jugadores máximos", 20)
 	onlineMode := promptBoolean(reader, "[?] ¿Habilitar online-mode (requiere cuenta premium)? (true/false)", true)
-	port := promptPort(reader, "[?] Puerto del servidor", 25565)
+	port := promptPort(reader, "[?] Puerto del servidor", prompt.OriginDefault, 25565)
 
 	fileContent := fmt.Sprintf("motd=%s\n"+
 		"difficulty=%s\n"+
@@ -47,7 +47,7 @@ func SetupInitialProperties(reader *bufio.Reader, serverDir string, mcVersion st
 }
 
 func promptString(reader *bufio.Reader, message, defaultValue string) string {
-	promptText := fmt.Sprintf("%s [%s]: ", message, defaultValue)
+	promptText := message + prompt.Default(prompt.OriginDefault, defaultValue) + ": "
 	return prompt.LoopDefault(reader, promptText, defaultValue, func(input string) (string, bool, string) {
 		return input, true, ""
 	})
@@ -71,11 +71,15 @@ const defaultDifficultyChoice = 4
 
 func promptDifficulty(reader *bufio.Reader) (difficulty string, hardcore bool) {
 	fmt.Println("\n[?] Dificultad:")
+	labels := make([]string, len(difficultyOptions))
+	notes := make([]string, len(difficultyOptions))
 	for i, d := range difficultyOptions {
-		fmt.Printf("  %d) %s\n", i+1, d.label)
+		labels[i] = d.label
 	}
+	notes[defaultDifficultyChoice-1] = prompt.OriginDefault
+	fmt.Print(prompt.Options("  ", labels, notes))
 
-	promptText := fmt.Sprintf("[?] Opción [1-%d] [%d]: ", len(difficultyOptions), defaultDifficultyChoice)
+	promptText := prompt.MenuQuestion(len(difficultyOptions), prompt.EnterPicksDefault)
 	choice := prompt.LoopDefault(reader, promptText, defaultDifficultyChoice, func(input string) (int, bool, string) {
 		value, err := strconv.Atoi(input)
 		if err != nil || value < 1 || value > len(difficultyOptions) {
@@ -89,7 +93,7 @@ func promptDifficulty(reader *bufio.Reader) (difficulty string, hardcore bool) {
 }
 
 func promptInt(reader *bufio.Reader, message string, defaultValue int) int {
-	promptText := fmt.Sprintf("%s [%d]: ", message, defaultValue)
+	promptText := message + prompt.Default(prompt.OriginDefault, defaultValue) + ": "
 	return prompt.LoopDefault(reader, promptText, defaultValue, func(input string) (int, bool, string) {
 		parsedValue, err := strconv.Atoi(input)
 		if err != nil || parsedValue <= 0 {
@@ -104,7 +108,7 @@ func promptBoolean(reader *bufio.Reader, message string, defaultValue bool) bool
 	if defaultValue {
 		defaultStr = "true"
 	}
-	promptText := fmt.Sprintf("%s [%s]: ", message, defaultStr)
+	promptText := message + prompt.Default(prompt.OriginDefault, defaultStr) + ": "
 
 	return prompt.LoopDefault(reader, promptText, defaultValue, func(input string) (bool, bool, string) {
 		switch strings.ToLower(input) {
@@ -117,8 +121,10 @@ func promptBoolean(reader *bufio.Reader, message string, defaultValue bool) bool
 	})
 }
 
-func promptPort(reader *bufio.Reader, message string, defaultValue int) int {
-	promptText := fmt.Sprintf("%s [%d]: ", message, defaultValue)
+// origin dice de donde sale el default: el por defecto al crear o el actual al
+// actualizar
+func promptPort(reader *bufio.Reader, message, origin string, defaultValue int) int {
+	promptText := message + prompt.Default(origin, defaultValue) + ": "
 	return prompt.LoopDefault(reader, promptText, defaultValue, func(input string) (int, bool, string) {
 		value, err := strconv.Atoi(input)
 		if err != nil || value <= 0 || value > 65535 {
@@ -169,7 +175,7 @@ func UpdatePort(reader *bufio.Reader, serverDir string) error {
 		current = 25565
 	}
 
-	newPort := promptPort(reader, "[?] Puerto del servidor (Enter para mantener el actual)", current)
+	newPort := promptPort(reader, "[?] Puerto del servidor", prompt.OriginCurrent, current)
 
 	lines := strings.Split(string(data), "\n")
 	replaced := false

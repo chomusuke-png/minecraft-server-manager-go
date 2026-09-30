@@ -118,19 +118,25 @@ func promptArclightBase(reader *bufio.Reader, bases []string, current string) (s
 		return bases[0], nil
 	}
 
-	defaultOption := 1
+	// Enter mantiene la base actual al actualizar, o elige la primera al crear
+	defaultOption, note, enterHint := 1, prompt.OriginDefault, prompt.EnterPicksDefault
 	if index := slices.Index(bases, current); index >= 0 {
-		defaultOption = index + 1
+		defaultOption, note, enterHint = index+1, prompt.OriginCurrent, prompt.EnterKeepsCurrent
 	}
 	cancelOption := len(bases) + 1
 
-	fmt.Printf("\n[?] Base de Arclight:\n")
+	labels := make([]string, len(bases))
+	notes := make([]string, len(bases))
 	for i, base := range bases {
-		fmt.Printf("  %d) %s\n", i+1, arclightBaseLabels[base])
+		labels[i] = arclightBaseLabels[base]
 	}
+	notes[defaultOption-1] = note
+
+	fmt.Printf("\n[?] Base de Arclight:\n")
+	fmt.Print(prompt.Options("  ", labels, notes))
 	fmt.Printf("  %d) Cancelar\n", cancelOption)
 
-	promptText := fmt.Sprintf("[?] Opción [1-%d] [%d]: ", cancelOption, defaultOption)
+	promptText := prompt.MenuQuestion(cancelOption, enterHint)
 	choice := prompt.LoopDefault(reader, promptText, defaultOption, func(input string) (int, bool, string) {
 		value, err := strconv.Atoi(input)
 		if err != nil || value < 1 || value > cancelOption {

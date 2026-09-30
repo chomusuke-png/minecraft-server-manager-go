@@ -3,7 +3,8 @@ package downloader
 import (
 	"fmt"
 	"strconv"
-	"strings"
+
+	"minecraft-manager/internal/prompt"
 )
 
 // Loader es un tipo de servidor que la herramienta sabe instalar. El orden de
@@ -44,21 +45,37 @@ func LoaderByChoice(input string) (string, bool) {
 	return Loaders[index-1].Type, true
 }
 
-// PrintLoaderOptions imprime la lista numerada de loaders, con lo que acepta
-// cada uno en una columna alineada
-func PrintLoaderOptions(indent string) {
-	fmt.Print(loaderOptions(indent))
+// LoaderChoice es el inverso de LoaderByChoice: el numero con que aparece el
+// loader en los menus
+func LoaderChoice(loaderType string) (int, bool) {
+	for i, loader := range Loaders {
+		if loader.Type == loaderType {
+			return i + 1, true
+		}
+	}
+	return 0, false
 }
 
-func loaderOptions(indent string) string {
+// PrintLoaderOptions imprime la lista numerada de loaders, con lo que acepta
+// cada uno en una columna alineada. current se marca como "— actual", y va
+// vacio al crear una instancia
+func PrintLoaderOptions(indent, current string) {
+	fmt.Print(loaderOptions(indent, current))
+}
+
+func loaderOptions(indent, current string) string {
 	width := 0
 	for _, loader := range Loaders {
 		width = max(width, len(loader.Label))
 	}
 
-	var options strings.Builder
+	labels := make([]string, len(Loaders))
+	notes := make([]string, len(Loaders))
 	for i, loader := range Loaders {
-		fmt.Fprintf(&options, "%s%d) %-*s   %s\n", indent, i+1, width, loader.Label, loader.Supports)
+		labels[i] = fmt.Sprintf("%-*s   %s", width, loader.Label, loader.Supports)
+		if loader.Type == current {
+			notes[i] = prompt.OriginCurrent
+		}
 	}
-	return options.String()
+	return prompt.Options(indent, labels, notes)
 }
