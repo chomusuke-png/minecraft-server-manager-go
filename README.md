@@ -25,11 +25,11 @@ Ve a la sección [Releases](../../releases) de este repositorio y descarga el bi
 2. Vas a ver el selector de instancias. Como todavía no hay ninguna, elige `C` para crear una.
 3. Te va a pedir:
    - **Nombre** de la instancia (sin espacios, se usa como nombre de carpeta).
-   - **RAM** asignada en GB (Enter para usar el valor por defecto de `config.json`).
-   - **Túnel**: Playit (recomendado, Enter), ngrok o ninguno.
+   - **RAM** asignada en GB. Como en todas las preguntas, Enter acepta el valor por defecto, que se muestra entre corchetes junto a su origen: acá `[por defecto: 4]`, que sale de `config.json`, y al actualizar una instancia `[actual: 6]`. En los menús, la opción que toma Enter se marca al final de su línea (`— recomendado`, `— actual`) y la pregunta dice qué hace Enter.
+   - **Túnel**: Playit (recomendado y por defecto), ngrok o ninguno.
 4. Como todavía no tiene el jar del servidor, te pregunta si quieres descargarlo automáticamente. Si dices que sí:
-   - Versión de Minecraft (ej. `1.20.1` o `26.3`). Se aceptan tanto la numeración clásica (`1.X`) como la numeración por año que Minecraft usa desde la `26.1`.
    - Tipo de servidor, que define qué puedes instalarle: **Paper** acepta plugins; **Fabric**, **Quilt**, **Forge** y **NeoForge** aceptan mods (Quilt también carga los de Fabric); **Arclight** acepta plugins y mods; y **Vanilla** no acepta ni plugins ni mods. El menú muestra esto al lado de cada opción.
+   - Versión de Minecraft: se consulta cuáles soporta el tipo de servidor que elegiste y la pregunta muestra el rango, por ejemplo `Versión de Minecraft para Arclight (1.16.5 a 1.21.11) [1.21.11]`. Enter toma la más reciente, o escribes la que quieras, incluidas las `-rc`, `-pre` o snapshots que ese loader publique. Si escribes una que no soporta, te lo dice en el momento y te sugiere las más cercanas (ej. para `1.20.3` en Arclight: `1.20.4, 1.20.2, 1.20.1`). Se aceptan tanto la numeración clásica (`1.X`) como la numeración por año que Minecraft usa desde la `26.1`. Si la API del loader no responde, se pide escrita a mano sin validar.
    - Versión del loader: se consulta qué hay publicado para esa versión de Minecraft y puedes elegir la **más reciente**, la **estable** o escribir una en particular. Vanilla no pregunta nada porque no tiene versión propia. Qué significa cada opción según el loader: en Paper es el número de build (estable = canal `default`), en Fabric la versión del loader (el instalador siempre es el estable), en Quilt la versión del loader entre las compatibles con esa versión de Minecraft (estable = sin `-beta`/`-pre`), en Forge lo que publica como `latest` y `recommended`, en NeoForge la última del maven contra la última sin `-beta`/`-alpha`, y en Arclight la build más reciente (que suele ser una snapshot) contra la última del canal estable. Si el loader no publicó ninguna estable para esa versión, esa opción no aparece; pasa hoy con NeoForge en la `26.1` y la `26.3`, que sólo tienen betas.
    - Arclight (plugins de Bukkit sobre un servidor con mods) corre sobre Forge, NeoForge o Fabric según la versión de Minecraft. Si hay más de una base, primero te pregunta cuál y después la versión; la versión se guarda con la base adelante (ej. `neoforge-1.0.1-8ec9529`). El primer arranque tarda más porque Arclight descarga las librerías del loader. Arclight no corre en Java más nuevos que 22, así que si tu Java del sistema es más nuevo te ofrece conseguir uno compatible.
    - Si el Java que tienes no es compatible con esa versión, te ofrece conseguir uno (descarga automática de [Adoptium](https://adoptium.net/) o indicar la ruta a un Java que ya tengas instalado). Qué Java pide cada versión se lo pregunta a Mojang al instalar y lo guarda en `instance.json` como `java_major`, así que funciona también con versiones nuevas; sin conexión usa una tabla interna.
@@ -61,7 +61,7 @@ Ve a la sección [Releases](../../releases) de este repositorio y descarga el bi
 
 - Un número selecciona esa instancia y la arranca.
 - `C` crea una instancia nueva.
-- `U` te deja elegir una instancia existente y cambiarle la versión de Minecraft, el tipo de loader, la versión del loader, la RAM, el puerto, el túnel y el mínimo de backups a conservar, sin tener que borrarla y crearla de nuevo. En el menú de versión del loader aparece primero `Mantener la actual`, que es lo que toma si presionas Enter; sólo se ofrece si no cambiaste ni el loader ni la versión de Minecraft, porque en ese caso la versión vieja ya no aplica.
+- `U` te deja elegir una instancia existente y cambiarle el tipo de loader, la versión de Minecraft, la versión del loader, la RAM, el puerto, el túnel y el mínimo de backups a conservar, sin tener que borrarla y crearla de nuevo. Primero eliges el loader y después escribes la versión de Minecraft, validada contra las que ese loader soporta: Enter mantiene la actual, siempre que el loader la soporte. Si no la soporta, Enter no elige nada y tienes que escribir otra a propósito, para no cambiar la versión del mundo por accidente. En el menú de versión del loader aparece primero `Mantener la actual`, que es lo que toma si presionas Enter; sólo se ofrece si no cambiaste ni el loader ni la versión de Minecraft, porque en ese caso la versión vieja ya no aplica.
 - `D` te deja elegir una instancia y borrarla por completo (mundo, backups, todo). Pide escribir el nombre exacto para confirmar; cualquier otra cosa (o Enter en blanco) cancela sin tocar nada.
 - `Q` sale del programa.
 
@@ -120,12 +120,6 @@ El ícono del `.exe` viene de `cmd/rsrc_windows_amd64.syso`, que está versionad
 go install github.com/tc-hib/go-winres@latest
 go-winres make --arch amd64 --in winres/winres.json --out cmd/rsrc
 ```
-
-## Pendiente
-
-- Al crear una instancia, y al actualizarla con `U`, elegir primero el loader y después la versión de Minecraft. Hoy es al revés, y recién al elegir el loader te enteras de que no soporta la versión que escribiste (pasa con Arclight, que publica sólo algunas versiones, o con NeoForge, que empieza en 1.20.2). Con el loader elegido primero, la versión se puede validar contra lo que ese loader soporta, o sugerir las disponibles.
-  - Avance: ya está confirmado que cada loader publica la lista de versiones de Minecraft que soporta. Paper la tiene en su API (`fill.papermc.io`), Fabric y Quilt en sus servidores de metadata (Fabric además marca cuáles son estables), Forge en las claves de su `promotions_slim.json`, NeoForge en su `maven-metadata.xml`, Arclight en su API de archivos y Vanilla en el manifest de Mojang.
-  - Plan: sugerir las versiones estables de la más nueva a la más vieja, con la más nueva por defecto, y dejar escribir la versión a mano si la API no responde. Con `U`, Enter mantendría la versión actual sólo si el loader nuevo la soporta.
 
 ## Créditos
 
