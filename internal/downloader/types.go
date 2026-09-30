@@ -9,6 +9,21 @@ type MojangManifest struct {
 type MojangVersion struct {
 	ID  string `json:"id"`
 	URL string `json:"url"`
+	// "release", "snapshot", "old_beta" u "old_alpha"
+	Type string `json:"type"`
+}
+
+// PaperProject es el proyecto en la API v3 de Paper, con las versiones de
+// Minecraft agrupadas por version mayor
+type PaperProject struct {
+	Versions map[string][]string `json:"versions"`
+}
+
+// FlaggedGameVersion es una version de Minecraft en la metadata de Fabric y de
+// Quilt, que marcan cuales son estables
+type FlaggedGameVersion struct {
+	Version string `json:"version"`
+	Stable  bool   `json:"stable"`
 }
 
 type MojangVersionDetails struct {

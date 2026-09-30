@@ -36,12 +36,17 @@ func UpdateLoader(instanceDir string, reader *bufio.Reader, javaPath string) err
 	}
 	logx.Info("\nInstancia actual: %s %s | RAM: %s", meta.LoaderType, meta.MCVersion, ramDisplay)
 
-	promptText := "[?] Nueva versión de Minecraft" + prompt.Default(prompt.OriginCurrent, meta.MCVersion) + ": "
-	newVersion := prompt.LoopDefault(reader, promptText, meta.MCVersion, func(input string) (string, bool, string) {
-		return input, true, ""
-	})
-
+	// el loader va primero para que la version se elija entre las que soporta
 	newLoaderType := promptLoaderType(reader, meta.LoaderType)
+
+	newVersion, err := downloader.ChooseMCVersion(reader, newLoaderType, meta.MCVersion)
+	if err != nil {
+		if errors.Is(err, downloader.ErrCancelled) {
+			logx.Info("Actualización cancelada.")
+			return nil
+		}
+		return err
+	}
 
 	// la version que ya tiene solo sigue siendo valida si no cambio ni el loader
 	// ni la version de Minecraft

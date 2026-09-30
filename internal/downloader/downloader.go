@@ -291,20 +291,10 @@ func fetchPlayitSHA256(assetName string) (string, error) {
 }
 
 func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
-	version, ok := prompt.Loop(reader, "[?] Introduzca la versión de Minecraft a descargar (e.g., 1.20.1): ", func(input string) (string, bool, string) {
-		if input == "" {
-			return "", false, "Entrada incorrecta, reintente."
-		}
-		return input, true, ""
-	})
-	if !ok {
-		logx.Error("\nNo se pudo leer la entrada. Cancelado.")
-		return nil
-	}
-
+	// el loader va primero para que la version se elija entre las que soporta
 	cancelOption := len(Loaders) + 1
 
-	fmt.Printf("\n[?] Tipo de servidor para %s:\n", version)
+	fmt.Printf("\n[?] Tipo de servidor:\n")
 	PrintLoaderOptions("  ", "")
 	fmt.Printf("  %d) Cancelar\n", cancelOption)
 
@@ -324,6 +314,16 @@ func (d *Downloader) PromptUser(reader *bufio.Reader) *DownloadResult {
 	}
 	if loaderType == "" {
 		logx.Info("Cancelado.")
+		return nil
+	}
+
+	version, err := ChooseMCVersion(reader, loaderType, "")
+	if err != nil {
+		if errors.Is(err, ErrCancelled) {
+			logx.Info("Cancelado.")
+		} else {
+			logx.Error("\n%v", err)
+		}
 		return nil
 	}
 
