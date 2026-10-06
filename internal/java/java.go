@@ -290,31 +290,44 @@ func wantsDedicated(ask AskLine, candidate string, major int) bool {
 	return ok && choice == "2"
 }
 
-// obtain consigue un runtime que cumpla req, automáticamente o a mano.
+// download es Download, reemplazable en los tests para no bajar un JDK real
+var download = Download
+
+// obtain consigue un runtime que cumpla req, automáticamente o a mano. Si la
+// descarga falla (sin internet, Adoptium caido) vuelve al menu en vez de
+// cancelar todo, para poder reintentar o indicar una ruta
 func obtain(ask AskLine, req Requirement) (string, error) {
-	fmt.Printf("\n[?] ¿Cómo conseguir %s?\n", req)
-	if AutoDownloadSupported() {
-		fmt.Printf("  1) Descargarlo automáticamente de Adoptium (queda en runtimes/)\n")
-	} else {
-		fmt.Printf("  1) (no disponible: la descarga automática no está implementada para %s/%s)\n", runtime.GOOS, runtime.GOARCH)
-	}
-	fmt.Println("  2) Indicar la ruta a un Java que ya tengas instalado")
-	fmt.Println("  3) Cancelar")
+	for {
+		fmt.Printf("\n[?] ¿Cómo conseguir %s?\n", req)
+		if AutoDownloadSupported() {
+			fmt.Printf("  1) Descargarlo automáticamente de Adoptium (queda en runtimes/)\n")
+		} else {
+			fmt.Printf("  1) (no disponible: la descarga automática no está implementada para %s/%s)\n", runtime.GOOS, runtime.GOARCH)
+		}
+		fmt.Println("  2) Indicar la ruta a un Java que ya tengas instalado")
+		fmt.Println("  3) Cancelar")
 
-	choice, ok := choose(ask, "\n[?] Opción [1-3]: ", "1", "2", "3")
-	if !ok || choice == "3" {
-		return "", fmt.Errorf("hace falta %s para esta instancia", req)
-	}
+		choice, ok := choose(ask, "\n[?] Opción [1-3]: ", "1", "2", "3")
+		if !ok || choice == "3" {
+			return "", fmt.Errorf("hace falta %s para esta instancia", req)
+		}
 
-	if choice == "1" {
+		if choice == "2" {
+			return askManualPath(ask, req)
+		}
+
 		if !AutoDownloadSupported() {
 			logx.Error("La descarga automática no está implementada para %s/%s.", runtime.GOOS, runtime.GOARCH)
 			return askManualPath(ask, req)
 		}
-		return Download(req.Min)
-	}
 
-	return askManualPath(ask, req)
+		path, err := download(req.Min)
+		if err == nil {
+			return path, nil
+		}
+		logx.Error("%v", err)
+		logx.Info("Puedes reintentar la descarga o indicar la ruta a un Java que ya tengas instalado.")
+	}
 }
 
 func askManualPath(ask AskLine, req Requirement) (string, error) {

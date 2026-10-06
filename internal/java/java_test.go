@@ -1,6 +1,8 @@
 package java
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -283,5 +285,62 @@ func TestWithMojangMinimum(t *testing.T) {
 		if got := c.table.WithMojangMinimum(c.mojang); got != c.want {
 			t.Errorf("%s: got %+v, want %+v", c.name, got, c.want)
 		}
+	}
+}
+
+// answers simula al usuario respondiendo en orden; sin mas respuestas es EOF
+func answers(lines ...string) AskLine {
+	return func(string) (string, bool) {
+		if len(lines) == 0 {
+			return "", false
+		}
+		line := lines[0]
+		lines = lines[1:]
+		return line, true
+	}
+}
+
+func fakeDownload(t *testing.T, results ...error) *int {
+	t.Helper()
+	calls := 0
+	original := download
+	download = func(major int) (string, error) {
+		err := results[calls]
+		calls++
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("runtimes/jdk-%d/bin/java", major), nil
+	}
+	t.Cleanup(func() { download = original })
+	return &calls
+}
+
+func TestObtainVuelveAlMenuSiFallaLaDescarga(t *testing.T) {
+	if !AutoDownloadSupported() {
+		t.Skip("sin descarga automática en esta plataforma")
+	}
+
+	calls := fakeDownload(t, errors.New("sin internet"), nil)
+	got, err := obtain(answers("1", "1"), Requirement{Min: 25})
+	if err != nil {
+		t.Fatalf("el reintento debería funcionar: %v", err)
+	}
+	if got != "runtimes/jdk-25/bin/java" || *calls != 2 {
+		t.Errorf("got %q con %d descargas, want el jdk-25 al segundo intento", got, *calls)
+	}
+}
+
+func TestObtainPermiteCancelarDespuesDeUnaDescargaFallida(t *testing.T) {
+	if !AutoDownloadSupported() {
+		t.Skip("sin descarga automática en esta plataforma")
+	}
+
+	calls := fakeDownload(t, errors.New("sin internet"))
+	if _, err := obtain(answers("1", "3"), Requirement{Min: 21}); err == nil {
+		t.Error("cancelar debería devolver error")
+	}
+	if *calls != 1 {
+		t.Errorf("descargas = %d, want 1", *calls)
 	}
 }
