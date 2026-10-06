@@ -48,12 +48,15 @@ func (r *Runner) Start(instanceDir string) {
 	stdinLines := make(chan string)
 	go forwardStdin(stdinLines)
 
-	javaPath := r.resolveJava(meta)
+	javaPath, mismatched := r.resolveJava(meta)
 	if java.Missing(javaPath) {
 		if !r.replaceMissingJava(instanceDir, meta, javaPath, stdinLines) {
 			return
 		}
-		javaPath = r.resolveJava(meta)
+		javaPath, mismatched = r.resolveJava(meta)
+	}
+	if mismatched && r.fixMismatchedJava(instanceDir, meta, stdinLines) {
+		javaPath, _ = r.resolveJava(meta)
 	}
 
 	ramGB := r.resolveRAM(meta)
@@ -74,7 +77,7 @@ func (r *Runner) Start(instanceDir string) {
 		}
 
 		if r.offerJavaFix(instanceDir, meta, javaPath, sniffer.detected, stdinLines) {
-			javaPath = r.resolveJava(meta)
+			javaPath, _ = r.resolveJava(meta)
 			logx.Info("Reintentando con el nuevo runtime...")
 			continue
 		}
@@ -103,8 +106,8 @@ func forwardStdin(lines chan<- string) {
 
 // resolveJava elige el runtime de la instancia y avisa si no coincide con lo que
 // pide la versión, para que un UnsupportedClassVersionError crudo no sea la
-// primera pista.
-func (r *Runner) resolveJava(meta *instance.InstanceMeta) string {
+// primera pista. El bool es true solo si se pudo comprobar que no cumple.
+func (r *Runner) resolveJava(meta *instance.InstanceMeta) (string, bool) {
 	javaPath := r.cfg.JavaPath
 	if meta.JavaPath != "" {
 		javaPath = meta.JavaPath
@@ -115,19 +118,54 @@ func (r *Runner) resolveJava(meta *instance.InstanceMeta) string {
 	// si falta, Start ofrece reemplazarlo y verificarlo aca solo daria un aviso
 	// confuso
 	if requirement.Min == 0 || java.Missing(javaPath) {
-		return javaPath
+		return javaPath, false
 	}
 
 	major, err := java.DetectMajor(javaPath)
 	if err != nil {
 		logx.Warn("No se pudo verificar la versión de '%s': %v", javaPath, err)
-		return javaPath
+		return javaPath, false
 	}
 	if !requirement.Satisfies(major) {
 		logx.Warn("'%s' es Java %d pero %s %s requiere %s. El servidor probablemente no arranque.",
 			javaPath, major, meta.LoaderType, meta.MCVersion, requirement)
+		return javaPath, true
 	}
-	return javaPath
+	return javaPath, false
+}
+
+// fixMismatchedJava ofrece conseguir un runtime compatible antes de arrancar,
+// cuando ya se sabe que el actual no cumple, en vez de esperar a que el servidor
+// se caiga. Si dice que no o cancela se arranca igual con el que tiene, por si
+// sabe que le sirve. Devuelve true si cambio el runtime
+func (r *Runner) fixMismatchedJava(instanceDir string, meta *instance.InstanceMeta, stdinLines <-chan string) bool {
+	if !askYesNo(askFromStdinLines(stdinLines), "[?] ¿Conseguir uno compatible antes de arrancar?") {
+		logx.Info("Se arranca con el Java actual.")
+		return false
+	}
+	if !r.repairJava(instanceDir, meta, javaRequirement(meta), stdinLines) {
+		logx.Info("Se arranca con el Java actual.")
+		return false
+	}
+	return true
+}
+
+// askYesNo es prompt.YesNo sobre un AskLine, porque el runner ya le cedio
+// os.Stdin a forwardStdin. Sin respuesta se asume que no
+func askYesNo(ask java.AskLine, question string) bool {
+	for {
+		answer, ok := ask(fmt.Sprintf("%s (y/n): ", question))
+		if !ok {
+			return false
+		}
+		switch strings.ToLower(answer) {
+		case "y", "s", "si", "yes":
+			return true
+		case "n", "no":
+			return false
+		}
+		logx.Error("Entrada incorrecta, reintente.")
+	}
 }
 
 // javaRequirement es el Java que necesita la instancia: el de la tabla, subido

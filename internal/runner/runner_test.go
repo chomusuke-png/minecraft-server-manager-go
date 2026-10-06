@@ -198,3 +198,56 @@ func TestJavaRequirementUsaElJavaDeMojang(t *testing.T) {
 		}
 	}
 }
+
+// linesFor carga las respuestas en un canal cerrado, como el que alimenta
+// forwardStdin cuando ya no queda entrada
+func linesFor(answers ...string) <-chan string {
+	lines := make(chan string, len(answers))
+	for _, answer := range answers {
+		lines <- answer + "\n"
+	}
+	close(lines)
+	return lines
+}
+
+func TestFixMismatchedJavaArrancaIgualSiDiceQueNo(t *testing.T) {
+	meta := &instance.InstanceMeta{LoaderType: "paper", MCVersion: "26.3", JavaPath: "java"}
+
+	if testRunner().fixMismatchedJava(t.TempDir(), meta, linesFor("n")) {
+		t.Error("diciendo que no no debería cambiar el runtime")
+	}
+	if meta.JavaPath != "java" {
+		t.Errorf("java_path = %q, debería seguir siendo 'java'", meta.JavaPath)
+	}
+}
+
+func TestFixMismatchedJavaArrancaIgualSiCancela(t *testing.T) {
+	meta := &instance.InstanceMeta{LoaderType: "paper", MCVersion: "26.3", JavaPath: "java"}
+
+	// 3 es Cancelar en el menu de como conseguir el Java
+	if testRunner().fixMismatchedJava(t.TempDir(), meta, linesFor("s", "3")) {
+		t.Error("cancelando no debería cambiar el runtime")
+	}
+	if meta.JavaPath != "java" {
+		t.Errorf("java_path = %q, debería seguir siendo 'java'", meta.JavaPath)
+	}
+}
+
+func TestAskYesNo(t *testing.T) {
+	cases := []struct {
+		name    string
+		answers []string
+		want    bool
+	}{
+		{"si", []string{"s"}, true},
+		{"no", []string{"n"}, false},
+		{"reintenta lo invalido", []string{"quizas", "y"}, true},
+		{"sin entrada es no", nil, false},
+	}
+
+	for _, c := range cases {
+		if got := askYesNo(askFromStdinLines(linesFor(c.answers...)), "[?] ¿Seguro?"); got != c.want {
+			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
+		}
+	}
+}
