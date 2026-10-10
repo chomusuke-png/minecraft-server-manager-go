@@ -95,27 +95,29 @@ Cada instancia puede pisar su propia RAM, puerto, versión de Java, mínimo de b
 
 ## Compilar desde el código fuente
 
-Necesitas [Go 1.27+](https://go.dev/dl/):
+Necesitas [Go 1.27+](https://go.dev/dl/). El código de Go está en `core/`, así que los comandos se corren desde ahí, y los binarios quedan en `builds/`, en la raíz del repo:
 
 ```bash
+cd core
+
 # Windows
-go build -o builds/msm-windows-amd64.exe ./cmd
+go build -o ../builds/msm-windows-amd64.exe ./cmd
 
 # Linux
-go build -o builds/msm-linux-amd64 ./cmd
+go build -o ../builds/msm-linux-amd64 ./cmd
 
 # Cross-compilar Windows desde Linux (o al revés) sin instalar nada más:
-GOOS=windows GOARCH=amd64 go build -o builds/msm-windows-amd64.exe ./cmd
-GOOS=linux   GOARCH=amd64 go build -o builds/msm-linux-amd64       ./cmd
+GOOS=windows GOARCH=amd64 go build -o ../builds/msm-windows-amd64.exe ./cmd
+GOOS=linux   GOARCH=amd64 go build -o ../builds/msm-linux-amd64       ./cmd
 ```
 
 Una build así queda identificada como `dev` y nunca va a ofrecer actualizarse sola (no tiene versión contra la cual comparar). Los releases oficiales se compilan pisando esa versión:
 
 ```bash
-go build -ldflags "-X main.version=vx.x.x" -o builds/msm-windows-amd64.exe ./cmd
+go build -ldflags "-X main.version=vx.x.x" -o ../builds/msm-windows-amd64.exe ./cmd
 ```
 
-El ícono del `.exe` viene de `cmd/rsrc_windows_amd64.syso`, que está versionado y `go build` enlaza solo al compilar para Windows, así que no hace falta nada extra. Sólo hay que regenerarlo si cambias el ícono en `winres/`:
+El ícono del `.exe` viene de `core/cmd/rsrc_windows_amd64.syso`, que está versionado y `go build` enlaza solo al compilar para Windows, así que no hace falta nada extra. Sólo hay que regenerarlo si cambias el ícono en `core/winres/`. Desde `core/`:
 
 ```bash
 go install github.com/tc-hib/go-winres@latest

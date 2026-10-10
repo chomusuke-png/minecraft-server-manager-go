@@ -13,12 +13,17 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+    # el modulo de go vive en core/, al lado de donde ira la app de escritorio
+    defaults:
+      run:
+        working-directory: core
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version-file: core/go.mod
+          cache-dependency-path: core/go.sum
 
       # gofmt no depende del SO, con correrlo en linux alcanza
       - name: Formato

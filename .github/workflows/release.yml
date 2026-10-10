@@ -17,18 +17,23 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version-file: core/go.mod
+          cache-dependency-path: core/go.sum
 
       - name: Tests
+        working-directory: core
         run: go test ./...
 
+      # se compila desde el modulo, en core/, pero los binarios quedan en el
+      # builds/ de la raiz, que es donde los buscan los pasos siguientes
       - name: Compilar
+        working-directory: core
         env:
           VERSION: ${{ github.ref_name }}
         run: |
-          mkdir -p builds
-          GOOS=windows GOARCH=amd64 go build -ldflags "-X main.version=$VERSION" -o builds/msm-windows-amd64.exe ./cmd
-          GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=$VERSION" -o builds/msm-linux-amd64 ./cmd
+          mkdir -p ../builds
+          GOOS=windows GOARCH=amd64 go build -ldflags "-X main.version=$VERSION" -o ../builds/msm-windows-amd64.exe ./cmd
+          GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=$VERSION" -o ../builds/msm-linux-amd64 ./cmd
 
       - name: Verificar los binarios
         env:
